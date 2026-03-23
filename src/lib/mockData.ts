@@ -6,7 +6,7 @@ export interface Match {
   flagB: string;
   date: string;
   time: string;
-  group: string;
+  multiplier: number;
   scoreA?: number;
   scoreB?: number;
   status: "upcoming" | "live" | "finished";
@@ -37,12 +37,12 @@ export interface ScoringRule {
 }
 
 export const mockMatches: Match[] = [
-  { id: "1", teamA: "Brasil", teamB: "Sérvia", flagA: "🇧🇷", flagB: "🇷🇸", date: "2026-06-14", time: "16:00", group: "A", status: "upcoming" },
-  { id: "2", teamA: "Argentina", teamB: "Arábia Saudita", flagA: "🇦🇷", flagB: "🇸🇦", date: "2026-06-14", time: "13:00", group: "B", scoreA: 2, scoreB: 1, status: "finished" },
-  { id: "3", teamA: "Alemanha", teamB: "Japão", flagA: "🇩🇪", flagB: "🇯🇵", date: "2026-06-15", time: "10:00", group: "C", status: "upcoming" },
-  { id: "4", teamA: "Espanha", teamB: "Costa Rica", flagA: "🇪🇸", flagB: "🇨🇷", date: "2026-06-15", time: "16:00", group: "D", scoreA: 7, scoreB: 0, status: "finished" },
-  { id: "5", teamA: "França", teamB: "Austrália", flagA: "🇫🇷", flagB: "🇦🇺", date: "2026-06-16", time: "19:00", group: "E", status: "live" },
-  { id: "6", teamA: "Portugal", teamB: "Gana", flagA: "🇵🇹", flagB: "🇬🇭", date: "2026-06-16", time: "16:00", group: "F", status: "upcoming" },
+  { id: "1", teamA: "Brasil", teamB: "Sérvia", flagA: "https://flagcdn.com/w80/br.png", flagB: "https://flagcdn.com/w80/rs.png", date: "2026-06-14", time: "16:00", multiplier: 1, status: "upcoming" },
+  { id: "2", teamA: "Argentina", teamB: "Arábia Saudita", flagA: "https://flagcdn.com/w80/ar.png", flagB: "https://flagcdn.com/w80/sa.png", date: "2026-06-14", time: "13:00", multiplier: 1, scoreA: 2, scoreB: 1, status: "finished" },
+  { id: "3", teamA: "Alemanha", teamB: "Japão", flagA: "https://flagcdn.com/w80/de.png", flagB: "https://flagcdn.com/w80/jp.png", date: "2026-06-15", time: "10:00", multiplier: 1, status: "upcoming" },
+  { id: "4", teamA: "Espanha", teamB: "Costa Rica", flagA: "https://flagcdn.com/w80/es.png", flagB: "https://flagcdn.com/w80/cr.png", date: "2026-06-15", time: "16:00", multiplier: 2, scoreA: 7, scoreB: 0, status: "finished" },
+  { id: "5", teamA: "França", teamB: "Austrália", flagA: "https://flagcdn.com/w80/fr.png", flagB: "https://flagcdn.com/w80/au.png", date: "2026-06-16", time: "19:00", multiplier: 1, status: "live" },
+  { id: "6", teamA: "Portugal", teamB: "Gana", flagA: "https://flagcdn.com/w80/pt.png", flagB: "https://flagcdn.com/w80/gh.png", date: "2026-06-16", time: "16:00", multiplier: 1, status: "upcoming" },
 ];
 
 export const mockPlayers: Player[] = [
