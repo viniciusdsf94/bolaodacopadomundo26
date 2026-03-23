@@ -3,6 +3,7 @@ import { ArrowLeft, Trophy, Target, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockMatches, mockBets, mockPlayers, mockScoringRules } from "@/lib/mockData";
 
 const MatchDetails = () => {
@@ -33,17 +34,17 @@ const MatchDetails = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="rounded-2xl border border-border bg-gradient-card p-6 text-center"
         >
-          <p className="text-xs text-muted-foreground mb-2">Grupo {match.group}</p>
+          {match.multiplier > 1 && <p className="text-xs font-bold text-accent mb-2">Multiplicador ×{match.multiplier}</p>}
           <div className="flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-4xl">{match.flagA}</span>
+              <Flag src={match.flagA} alt={match.teamA} size="lg" />
               <span className="text-sm font-medium">{match.teamA}</span>
             </div>
             <div className="font-display text-4xl font-black text-foreground">
               {match.scoreA ?? "-"} <span className="text-muted-foreground">:</span> {match.scoreB ?? "-"}
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-4xl">{match.flagB}</span>
+              <Flag src={match.flagB} alt={match.teamB} size="lg" />
               <span className="text-sm font-medium">{match.teamB}</span>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, Save, Settings, CalendarDays } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Save, Settings, CalendarDays, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,20 +8,81 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import { mockMatches, mockScoringRules, type Match, type ScoringRule } from "@/lib/mockData";
 
+const FlagInput = ({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  label: string;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      onChange(url);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-center gap-2">
+        {value ? (
+          <div className="relative h-10 w-10 shrink-0 rounded-lg border border-border bg-secondary overflow-hidden">
+            <img src={value} alt="" className="h-full w-full object-cover" />
+            <button
+              onClick={() => onChange("")}
+              className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </button>
+        )}
+        <Input
+          placeholder="URL da bandeira"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-secondary border-border text-xs"
+        />
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      </div>
+    </div>
+  );
+};
+
 const Admin = () => {
   const [matches, setMatches] = useState<Match[]>(mockMatches);
   const [rules, setRules] = useState<ScoringRule[]>(mockScoringRules);
-  const [newMatch, setNewMatch] = useState({ teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", group: "" });
+  const [newMatch, setNewMatch] = useState({
+    teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1",
+  });
 
   const handleAddMatch = () => {
     if (!newMatch.teamA || !newMatch.teamB) return;
     const match: Match = {
       id: Date.now().toString(),
-      ...newMatch,
+      teamA: newMatch.teamA,
+      teamB: newMatch.teamB,
+      flagA: newMatch.flagA,
+      flagB: newMatch.flagB,
+      date: newMatch.date,
+      time: newMatch.time,
+      multiplier: parseFloat(newMatch.multiplier) || 1,
       status: "upcoming",
     };
     setMatches((prev) => [...prev, match]);
-    setNewMatch({ teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", group: "" });
+    setNewMatch({ teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1" });
   };
 
   const handleUpdateResult = (id: string, scoreA: string, scoreB: string) => {
@@ -58,45 +119,50 @@ const Admin = () => {
 
           <TabsContent value="matches" className="space-y-4 mt-4">
             {/* Add match form */}
-            <div className="rounded-xl border border-border bg-gradient-card p-4 space-y-3">
+            <div className="rounded-xl border border-border bg-gradient-card p-4 space-y-4">
               <h3 className="font-display font-bold text-sm">Nova Partida</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">Time A</Label>
-                  <Input
-                    placeholder="Brasil"
-                    value={newMatch.teamA}
-                    onChange={(e) => setNewMatch((p) => ({ ...p, teamA: e.target.value }))}
-                    className="bg-secondary border-border"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Bandeira A</Label>
-                  <Input
-                    placeholder="🇧🇷"
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Team A */}
+                <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Time A</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome</Label>
+                    <Input
+                      placeholder="Brasil"
+                      value={newMatch.teamA}
+                      onChange={(e) => setNewMatch((p) => ({ ...p, teamA: e.target.value }))}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <FlagInput
+                    label="Bandeira"
                     value={newMatch.flagA}
-                    onChange={(e) => setNewMatch((p) => ({ ...p, flagA: e.target.value }))}
-                    className="bg-secondary border-border"
+                    onChange={(val) => setNewMatch((p) => ({ ...p, flagA: val }))}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Time B</Label>
-                  <Input
-                    placeholder="Sérvia"
-                    value={newMatch.teamB}
-                    onChange={(e) => setNewMatch((p) => ({ ...p, teamB: e.target.value }))}
-                    className="bg-secondary border-border"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Bandeira B</Label>
-                  <Input
-                    placeholder="🇷🇸"
+
+                {/* Team B */}
+                <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Time B</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome</Label>
+                    <Input
+                      placeholder="Sérvia"
+                      value={newMatch.teamB}
+                      onChange={(e) => setNewMatch((p) => ({ ...p, teamB: e.target.value }))}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <FlagInput
+                    label="Bandeira"
                     value={newMatch.flagB}
-                    onChange={(e) => setNewMatch((p) => ({ ...p, flagB: e.target.value }))}
-                    className="bg-secondary border-border"
+                    onChange={(val) => setNewMatch((p) => ({ ...p, flagB: val }))}
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Data</Label>
                   <Input
@@ -116,20 +182,21 @@ const Admin = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Grupo</Label>
+                  <Label className="text-xs">Multiplicador</Label>
                   <Input
-                    placeholder="A"
-                    value={newMatch.group}
-                    onChange={(e) => setNewMatch((p) => ({ ...p, group: e.target.value }))}
-                    className="bg-secondary border-border"
+                    type="number"
+                    min={1}
+                    step={0.5}
+                    value={newMatch.multiplier}
+                    onChange={(e) => setNewMatch((p) => ({ ...p, multiplier: e.target.value }))}
+                    className="bg-secondary border-border font-display font-bold"
                   />
                 </div>
-                <div className="flex items-end">
-                  <Button onClick={handleAddMatch} className="w-full gap-1">
-                    <Plus className="h-4 w-4" /> Adicionar
-                  </Button>
-                </div>
               </div>
+
+              <Button onClick={handleAddMatch} className="w-full gap-1">
+                <Plus className="h-4 w-4" /> Adicionar Partida
+              </Button>
             </div>
 
             {/* Match list */}
@@ -144,12 +211,21 @@ const Admin = () => {
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 flex-1 min-w-[150px]">
-                      <span className="text-xl">{match.flagA}</span>
+                      {match.flagA && (
+                        <img src={match.flagA} alt={match.teamA} className="h-6 w-8 rounded object-cover" />
+                      )}
                       <span className="text-sm font-medium">{match.teamA}</span>
                       <span className="text-muted-foreground text-xs">vs</span>
                       <span className="text-sm font-medium">{match.teamB}</span>
-                      <span className="text-xl">{match.flagB}</span>
+                      {match.flagB && (
+                        <img src={match.flagB} alt={match.teamB} className="h-6 w-8 rounded object-cover" />
+                      )}
                     </div>
+                    {match.multiplier > 1 && (
+                      <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent">
+                        ×{match.multiplier}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {match.date} {match.time}
                     </span>
@@ -183,7 +259,7 @@ const Admin = () => {
 
           <TabsContent value="rules" className="space-y-3 mt-4">
             <p className="text-sm text-muted-foreground">
-              Ajuste os pontos para cada critério de acerto
+              Ajuste os pontos para cada critério de acerto. O multiplicador da partida será aplicado sobre esses valores.
             </p>
             {rules.map((rule) => (
               <div

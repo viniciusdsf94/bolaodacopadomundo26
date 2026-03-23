@@ -1,6 +1,7 @@
 import { Trophy, TrendingUp, Target, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
 
 const statCards = [
@@ -93,7 +94,7 @@ const Dashboard = () => {
                 className="flex items-center justify-between rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{match.flagA}</span>
+                  <Flag src={match.flagA} alt={match.teamA} />
                   <span className="text-sm font-medium">{match.teamA}</span>
                 </div>
                 <div className="flex flex-col items-center">
@@ -102,7 +103,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{match.teamB}</span>
-                  <span className="text-2xl">{match.flagB}</span>
+                  <Flag src={match.flagB} alt={match.teamB} />
                 </div>
               </div>
             ))}

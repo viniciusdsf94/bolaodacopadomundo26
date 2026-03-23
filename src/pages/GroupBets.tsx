@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Users } from "lucide-react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
 
 const GroupBets = () => {
@@ -35,16 +36,16 @@ const GroupBets = () => {
                   <div className="rounded-xl border border-border bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{match.flagA}</span>
+                        <Flag src={match.flagA} alt={match.teamA} />
                         <div>
                           <p className="text-sm font-medium">
                             {match.teamA} vs {match.teamB}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Grupo {match.group} • {match.date}
+                            {match.date}
                           </p>
                         </div>
-                        <span className="text-2xl">{match.flagB}</span>
+                        <Flag src={match.flagB} alt={match.teamB} />
                       </div>
                       {match.status === "finished" && (
                         <span className="font-display font-bold text-foreground">

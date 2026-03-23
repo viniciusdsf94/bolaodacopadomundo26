@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
 
 const Bets = () => {
@@ -45,7 +46,7 @@ const Bets = () => {
                 {/* Match header */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-muted-foreground">
-                    Grupo {match.group} • {match.date}
+                    {match.date}{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
                   </span>
                   <div className="flex items-center gap-1">
                     {isLocked ? (
@@ -62,7 +63,7 @@ const Bets = () => {
                 {/* Score input */}
                 <div className="flex items-center gap-3">
                   <div className="flex flex-1 items-center gap-2">
-                    <span className="text-2xl">{match.flagA}</span>
+                    <Flag src={match.flagA} alt={match.teamA} />
                     <span className="text-sm font-medium flex-1">{match.teamA}</span>
                     <Input
                       type="number"
@@ -96,7 +97,7 @@ const Bets = () => {
                       className="w-14 text-center font-display font-bold bg-secondary border-border"
                     />
                     <span className="text-sm font-medium flex-1 text-right">{match.teamB}</span>
-                    <span className="text-2xl">{match.flagB}</span>
+                    <Flag src={match.flagB} alt={match.teamB} />
                   </div>
                 </div>
 
