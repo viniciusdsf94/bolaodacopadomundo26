@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Users } from "lucide-react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
 
 const GroupBets = () => {
