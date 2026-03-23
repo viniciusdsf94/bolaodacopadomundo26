@@ -36,7 +36,7 @@ const GroupBets = () => {
                   <div className="rounded-xl border border-border bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{match.flagA}</span>
+                        <Flag src={match.flagA} alt={match.teamA} />
                         <div>
                           <p className="text-sm font-medium">
                             {match.teamA} vs {match.teamB}
