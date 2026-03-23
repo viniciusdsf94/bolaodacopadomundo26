@@ -3,6 +3,7 @@ import { ArrowLeft, Trophy, Target, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockMatches, mockBets, mockPlayers, mockScoringRules } from "@/lib/mockData";
 
 const MatchDetails = () => {
