@@ -1,6 +1,7 @@
 import { Trophy, TrendingUp, Target, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
 
 const statCards = [
