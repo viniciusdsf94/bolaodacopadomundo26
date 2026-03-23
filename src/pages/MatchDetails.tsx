@@ -33,7 +33,7 @@ const MatchDetails = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="rounded-2xl border border-border bg-gradient-card p-6 text-center"
         >
-          <p className="text-xs text-muted-foreground mb-2">Grupo {match.group}</p>
+          {match.multiplier > 1 && <p className="text-xs font-bold text-accent mb-2">Multiplicador ×{match.multiplier}</p>}
           <div className="flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-1">
               <span className="text-4xl">{match.flagA}</span>

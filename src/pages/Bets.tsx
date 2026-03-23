@@ -45,7 +45,7 @@ const Bets = () => {
                 {/* Match header */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-muted-foreground">
-                    Grupo {match.group} • {match.date}
+                    {match.date}{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
                   </span>
                   <div className="flex items-center gap-1">
                     {isLocked ? (

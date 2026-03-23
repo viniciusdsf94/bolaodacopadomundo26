@@ -41,7 +41,7 @@ const GroupBets = () => {
                             {match.teamA} vs {match.teamB}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Grupo {match.group} • {match.date}
+                            {match.date}
                           </p>
                         </div>
                         <span className="text-2xl">{match.flagB}</span>
