@@ -45,7 +45,7 @@ const GroupBets = () => {
                             {match.date}
                           </p>
                         </div>
-                        <span className="text-2xl">{match.flagB}</span>
+                        <Flag src={match.flagB} alt={match.teamB} />
                       </div>
                       {match.status === "finished" && (
                         <span className="font-display font-bold text-foreground">

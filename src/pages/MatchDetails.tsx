@@ -44,7 +44,7 @@ const MatchDetails = () => {
               {match.scoreA ?? "-"} <span className="text-muted-foreground">:</span> {match.scoreB ?? "-"}
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-4xl">{match.flagB}</span>
+              <Flag src={match.flagB} alt={match.teamB} size="lg" />
               <span className="text-sm font-medium">{match.teamB}</span>
             </div>
           </div>
