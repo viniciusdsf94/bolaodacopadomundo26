@@ -64,7 +64,7 @@ const Bets = () => {
                 {/* Score input */}
                 <div className="flex items-center gap-3">
                   <div className="flex flex-1 items-center gap-2">
-                    <span className="text-2xl">{match.flagA}</span>
+                    <Flag src={match.flagA} alt={match.teamA} />
                     <span className="text-sm font-medium flex-1">{match.teamA}</span>
                     <Input
                       type="number"
