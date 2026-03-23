@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import Flag from "@/components/Flag";
+import { mockMatches } from "@/lib/mockData";
 import { mockMatches } from "@/lib/mockData";
 
 const Bets = () => {
