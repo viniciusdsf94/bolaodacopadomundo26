@@ -37,7 +37,7 @@ const MatchDetails = () => {
           {match.multiplier > 1 && <p className="text-xs font-bold text-accent mb-2">Multiplicador ×{match.multiplier}</p>}
           <div className="flex items-center justify-center gap-6">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-4xl">{match.flagA}</span>
+              <Flag src={match.flagA} alt={match.teamA} size="lg" />
               <span className="text-sm font-medium">{match.teamA}</span>
             </div>
             <div className="font-display text-4xl font-black text-foreground">
