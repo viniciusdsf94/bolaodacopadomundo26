@@ -103,7 +103,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{match.teamB}</span>
-                  <span className="text-2xl">{match.flagB}</span>
+                  <Flag src={match.flagB} alt={match.teamB} />
                 </div>
               </div>
             ))}
