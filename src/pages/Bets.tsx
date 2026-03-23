@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
-import { mockMatches } from "@/lib/mockData";
 
 const Bets = () => {
   const [bets, setBets] = useState<Record<string, { a: string; b: string }>>({});
