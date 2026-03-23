@@ -97,7 +97,7 @@ const Bets = () => {
                       className="w-14 text-center font-display font-bold bg-secondary border-border"
                     />
                     <span className="text-sm font-medium flex-1 text-right">{match.teamB}</span>
-                    <span className="text-2xl">{match.flagB}</span>
+                    <Flag src={match.flagB} alt={match.teamB} />
                   </div>
                 </div>
 
