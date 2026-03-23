@@ -94,7 +94,7 @@ const Dashboard = () => {
                 className="flex items-center justify-between rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{match.flagA}</span>
+                  <Flag src={match.flagA} alt={match.teamA} />
                   <span className="text-sm font-medium">{match.teamA}</span>
                 </div>
                 <div className="flex flex-col items-center">
