@@ -74,38 +74,22 @@ const Admin = () => {
                 {/* Team A */}
                 <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-3">
                   <p className="text-xs font-medium text-muted-foreground">Time A</p>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Nome</Label>
-                    <Input
-                      placeholder="Brasil"
-                      value={newMatch.teamA}
-                      onChange={(e) => setNewMatch((p) => ({ ...p, teamA: e.target.value }))}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <FlagInput
-                    label="Bandeira"
-                    value={newMatch.flagA}
-                    onChange={(val) => setNewMatch((p) => ({ ...p, flagA: val }))}
+                  <TeamSelect
+                    label="País"
+                    value={newMatch.teamA}
+                    onChange={(name, flag) => setNewMatch((p) => ({ ...p, teamA: name, flagA: flag }))}
+                    excludeTeam={newMatch.teamB}
                   />
                 </div>
 
                 {/* Team B */}
                 <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-3">
                   <p className="text-xs font-medium text-muted-foreground">Time B</p>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Nome</Label>
-                    <Input
-                      placeholder="Sérvia"
-                      value={newMatch.teamB}
-                      onChange={(e) => setNewMatch((p) => ({ ...p, teamB: e.target.value }))}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <FlagInput
-                    label="Bandeira"
-                    value={newMatch.flagB}
-                    onChange={(val) => setNewMatch((p) => ({ ...p, flagB: val }))}
+                  <TeamSelect
+                    label="País"
+                    value={newMatch.teamB}
+                    onChange={(name, flag) => setNewMatch((p) => ({ ...p, teamB: name, flagB: flag }))}
+                    excludeTeam={newMatch.teamA}
                   />
                 </div>
               </div>
