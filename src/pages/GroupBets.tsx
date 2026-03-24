@@ -7,7 +7,7 @@ import { mockMatches } from "@/lib/mockData";
 import { formatDateBR } from "@/lib/formatDate";
 
 const GroupBets = () => {
-  const finishedOrLive = mockMatches.filter((m) => m.status !== "upcoming");
+  const finishedOrLive = [...mockMatches].filter((m) => m.status !== "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
   return (
     <Layout>

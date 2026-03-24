@@ -134,7 +134,7 @@ const Admin = () => {
 
             {/* Match list */}
             <div className="space-y-2">
-              {matches.map((match, i) => (
+              {[...matches].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).map((match, i) => (
                 <motion.div
                   key={match.id}
                   initial={{ opacity: 0 }}

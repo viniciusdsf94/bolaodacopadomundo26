@@ -1,6 +1,6 @@
-/** Converts "yyyy-mm-dd" → "dd/mm/yyyy" */
+/** Converts "yyyy-mm-dd" → "dd/mm" */
 export function formatDateBR(dateStr: string): string {
   if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return `${d}/${m}/${y}`;
+  const [, m, d] = dateStr.split("-");
+  return `${d}/${m}`;
 }

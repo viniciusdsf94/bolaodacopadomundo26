@@ -13,7 +13,7 @@ const statCards = [
 ];
 
 const Dashboard = () => {
-  const nextMatches = mockMatches.filter((m) => m.status === "upcoming").slice(0, 3);
+  const nextMatches = [...mockMatches].filter((m) => m.status === "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 3);
 
   return (
     <Layout>
