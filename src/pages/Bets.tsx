@@ -30,7 +30,7 @@ const Bets = () => {
         </div>
 
         <div className="space-y-3">
-          {mockMatches.map((match, i) => {
+          {[...mockMatches].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).map((match, i) => {
             const isLocked = match.status !== "upcoming";
             return (
               <motion.div
