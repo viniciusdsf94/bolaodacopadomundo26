@@ -48,7 +48,7 @@ const MatchDetails = () => {
               <span className="text-sm font-medium">{match.teamB}</span>
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{match.date} • {match.time}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{formatDateBR(match.date)} • {match.time}</p>
         </motion.div>
 
         {/* Scoring rules */}

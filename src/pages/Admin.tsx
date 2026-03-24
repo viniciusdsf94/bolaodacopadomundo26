@@ -159,7 +159,7 @@ const Admin = () => {
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      {match.date} {match.time}
+                      {formatDateBR(match.date)} {match.time}
                     </span>
                     <div className="flex items-center gap-2">
                       <Input

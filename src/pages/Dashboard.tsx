@@ -98,7 +98,7 @@ const Dashboard = () => {
                   <span className="text-sm font-medium">{match.teamA}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-xs text-muted-foreground">{match.date}</span>
+                  <span className="text-xs text-muted-foreground">{formatDateBR(match.date)}</span>
                   <span className="font-display font-bold text-accent text-sm">{match.time}</span>
                 </div>
                 <div className="flex items-center gap-2">
