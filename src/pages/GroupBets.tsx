@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const GroupBets = () => {
   const finishedOrLive = mockMatches.filter((m) => m.status !== "upcoming");
@@ -42,7 +43,7 @@ const GroupBets = () => {
                             {match.teamA} vs {match.teamB}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {match.date}
+                            {formatDateBR(match.date)}
                           </p>
                         </div>
                         <Flag src={match.flagB} alt={match.teamB} />

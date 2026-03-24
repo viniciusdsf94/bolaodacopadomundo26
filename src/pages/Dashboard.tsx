@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const statCards = [
   { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },
@@ -98,7 +99,7 @@ const Dashboard = () => {
                   <span className="text-sm font-medium">{match.teamA}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-xs text-muted-foreground">{match.date}</span>
+                  <span className="text-xs text-muted-foreground">{formatDateBR(match.date)}</span>
                   <span className="font-display font-bold text-accent text-sm">{match.time}</span>
                 </div>
                 <div className="flex items-center gap-2">

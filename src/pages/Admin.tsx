@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import TeamSelect from "@/components/TeamSelect";
 import { mockMatches, mockScoringRules, type Match, type ScoringRule } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const Admin = () => {
   const [matches, setMatches] = useState<Match[]>(mockMatches);
@@ -159,7 +160,7 @@ const Admin = () => {
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      {match.date} {match.time}
+                      {formatDateBR(match.date)} {match.time}
                     </span>
                     <div className="flex items-center gap-2">
                       <Input

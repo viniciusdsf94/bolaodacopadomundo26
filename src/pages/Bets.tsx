@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateBR } from "@/lib/formatDate";
 import { Link } from "react-router-dom";
 import { Check, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ const Bets = () => {
                 {/* Match header */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-muted-foreground">
-                    {match.date}{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
+                    {formatDateBR(match.date)}{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
                   </span>
                   <div className="flex items-center gap-1">
                     {isLocked ? (

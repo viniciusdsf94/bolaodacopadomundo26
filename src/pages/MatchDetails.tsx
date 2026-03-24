@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockMatches, mockBets, mockPlayers, mockScoringRules } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const MatchDetails = () => {
   const { id } = useParams();
@@ -48,7 +49,7 @@ const MatchDetails = () => {
               <span className="text-sm font-medium">{match.teamB}</span>
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{match.date} • {match.time}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{formatDateBR(match.date)} • {match.time}</p>
         </motion.div>
 
         {/* Scoring rules */}
