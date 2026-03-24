@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockMatches, mockBets, mockPlayers, mockScoringRules } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const MatchDetails = () => {
   const { id } = useParams();

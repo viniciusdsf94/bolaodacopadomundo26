@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const statCards = [
   { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },

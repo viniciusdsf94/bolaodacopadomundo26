@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { mockMatches } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const GroupBets = () => {
   const finishedOrLive = mockMatches.filter((m) => m.status !== "upcoming");

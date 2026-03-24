@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateBR } from "@/lib/formatDate";
 import { Link } from "react-router-dom";
 import { Check, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";

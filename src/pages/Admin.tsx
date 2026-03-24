@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import TeamSelect from "@/components/TeamSelect";
 import { mockMatches, mockScoringRules, type Match, type ScoringRule } from "@/lib/mockData";
+import { formatDateBR } from "@/lib/formatDate";
 
 const Admin = () => {
   const [matches, setMatches] = useState<Match[]>(mockMatches);
