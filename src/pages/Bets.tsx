@@ -46,17 +46,14 @@ const Bets = () => {
               >
                 {/* Match header */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-muted-foreground">
-                    {formatDateBR(match.date)}{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
-                  </span>
                   <div className="flex items-center gap-1">
                     {isLocked ? (
                       <Lock className="h-3.5 w-3.5 text-destructive" />
                     ) : (
                       <Clock className="h-3.5 w-3.5 text-accent" />
                     )}
-                    <span className={`text-xs font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>
-                      {match.time}
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateBR(match.date)} • <span className={`font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>{match.time}</span>{match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
                     </span>
                   </div>
                 </div>
