@@ -1,65 +1,13 @@
-import { useState, useRef } from "react";
-import { Plus, Save, Settings, CalendarDays, ImagePlus, X } from "lucide-react";
+import { useState } from "react";
+import { Plus, Save, Settings, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import TeamSelect from "@/components/TeamSelect";
 import { mockMatches, mockScoringRules, type Match, type ScoringRule } from "@/lib/mockData";
-
-const FlagInput = ({
-  value,
-  onChange,
-  label,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  label: string;
-}) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      onChange(url);
-    }
-  };
-
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs">{label}</Label>
-      <div className="flex items-center gap-2">
-        {value ? (
-          <div className="relative h-10 w-10 shrink-0 rounded-lg border border-border bg-secondary overflow-hidden">
-            <img src={value} alt="" className="h-full w-full object-cover" />
-            <button
-              onClick={() => onChange("")}
-              className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-            >
-              <X className="h-2.5 w-2.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-          >
-            <ImagePlus className="h-4 w-4" />
-          </button>
-        )}
-        <Input
-          placeholder="URL da bandeira"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="bg-secondary border-border text-xs"
-        />
-        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-      </div>
-    </div>
-  );
-};
 
 const Admin = () => {
   const [matches, setMatches] = useState<Match[]>(mockMatches);
