@@ -1,7 +1,9 @@
 import { Trophy, TrendingUp, Target, Flame } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
+import { Button } from "@/components/ui/button";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
 import { formatDateBR } from "@/lib/formatDate";
 
@@ -47,6 +49,13 @@ const Dashboard = () => {
             );
           })}
         </div>
+
+        {/* CTA Palpites */}
+        <Link to="/palpites">
+          <Button className="w-full gap-2 text-sm font-display">
+            <Target className="h-4 w-4" /> Faça seus palpites para os jogos de hoje
+          </Button>
+        </Link>
 
         {/* Ranking */}
         <div>
