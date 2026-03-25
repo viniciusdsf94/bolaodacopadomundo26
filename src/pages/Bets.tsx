@@ -44,9 +44,24 @@ const Bets = () => {
     [currentDate]
   );
 
-  const isToday = currentDate === todayStr;
+  const getDateLabel = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((date.getTime() - today.getTime()) / 86400000);
 
-  const dateLabel = isToday ? "Hoje" : formatDateBR(currentDate);
+    if (diff === 0) return "Hoje";
+    if (diff === -1) return "Ontem";
+    if (diff === 1) return "Amanhã";
+
+    const weekday = date.toLocaleDateString("pt-BR", { weekday: "long" });
+    const dayNum = date.getDate();
+    const monthName = date.toLocaleDateString("pt-BR", { month: "long" });
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}. ${dayNum} de ${monthName}`;
+  };
+
+  const dateLabel = getDateLabel(currentDate);
 
   const handleChange = (matchId: string, team: "a" | "b", value: string) => {
     setBets((prev) => ({
