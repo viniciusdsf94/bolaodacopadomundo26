@@ -1,7 +1,9 @@
 import { Trophy, TrendingUp, Target, Flame } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
+import { Button } from "@/components/ui/button";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
 import { formatDateBR } from "@/lib/formatDate";
 
