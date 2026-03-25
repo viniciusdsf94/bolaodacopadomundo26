@@ -28,7 +28,6 @@ const Dashboard = () => {
     { label: "Em breve", value: "—", icon: Flame },
   ];
 
-const Dashboard = () => {
   const nextMatches = [...mockMatches].filter((m) => m.status === "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 3);
 
   return (
