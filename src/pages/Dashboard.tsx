@@ -48,6 +48,13 @@ const Dashboard = () => {
           })}
         </div>
 
+        {/* CTA Palpites */}
+        <Link to="/palpites">
+          <Button className="w-full gap-2 text-sm font-display">
+            <Target className="h-4 w-4" /> Faça seus palpites para os jogos de hoje
+          </Button>
+        </Link>
+
         {/* Ranking */}
         <div>
           <h2 className="font-display text-lg font-bold mb-3">Classificação</h2>
