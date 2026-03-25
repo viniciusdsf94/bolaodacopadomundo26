@@ -149,48 +149,52 @@ const Bets = () => {
                     </div>
 
                     {/* Score input */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-1 items-center gap-2">
+                    <div className="flex items-center justify-center gap-3">
+                      {/* Team A */}
+                      <div className="flex flex-col items-center gap-1 flex-1">
                         <Flag src={match.flagA} alt={match.teamA} />
-                        <span className="text-sm font-medium flex-1">{match.teamA}</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          disabled={isLocked}
-                          value={
-                            isLocked && match.scoreA !== undefined
-                              ? match.scoreA
-                              : bets[match.id]?.a ?? ""
-                          }
-                          onChange={(e) => handleChange(match.id, "a", e.target.value)}
-                          className="w-14 text-center font-display font-bold bg-secondary border-border"
-                        />
+                        <span className="text-xs font-medium text-center leading-tight">{match.teamA}</span>
                       </div>
+
+                      <Input
+                        type="number"
+                        min={0}
+                        max={20}
+                        disabled={isLocked}
+                        value={
+                          isLocked && match.scoreA !== undefined
+                            ? match.scoreA
+                            : bets[match.id]?.a ?? ""
+                        }
+                        onChange={(e) => handleChange(match.id, "a", e.target.value)}
+                        className="w-12 text-center font-display font-bold bg-secondary border-border"
+                      />
 
                       <span className="text-muted-foreground font-bold">×</span>
 
-                      <div className="flex flex-1 items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          disabled={isLocked}
-                          value={
-                            isLocked && match.scoreB !== undefined
-                              ? match.scoreB
-                              : bets[match.id]?.b ?? ""
-                          }
-                          onChange={(e) => handleChange(match.id, "b", e.target.value)}
-                          className="w-14 text-center font-display font-bold bg-secondary border-border"
-                        />
-                        <span className="text-sm font-medium flex-1 text-right">{match.teamB}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={20}
+                        disabled={isLocked}
+                        value={
+                          isLocked && match.scoreB !== undefined
+                            ? match.scoreB
+                            : bets[match.id]?.b ?? ""
+                        }
+                        onChange={(e) => handleChange(match.id, "b", e.target.value)}
+                        className="w-12 text-center font-display font-bold bg-secondary border-border"
+                      />
+
+                      {/* Team B */}
+                      <div className="flex flex-col items-center gap-1 flex-1">
                         <Flag src={match.flagB} alt={match.teamB} />
+                        <span className="text-xs font-medium text-center leading-tight">{match.teamB}</span>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center justify-center mt-3 gap-2">
                       {match.status === "finished" && (
                         <Link to={`/partida/${match.id}`}>
                           <Button variant="ghost" size="sm" className="text-xs text-primary">
@@ -199,7 +203,7 @@ const Bets = () => {
                         </Link>
                       )}
                       {!isLocked && (
-                        <Button size="sm" className="ml-auto gap-1 text-xs">
+                        <Button size="sm" className="gap-1 text-xs">
                           <Check className="h-3.5 w-3.5" /> Salvar
                         </Button>
                       )}
