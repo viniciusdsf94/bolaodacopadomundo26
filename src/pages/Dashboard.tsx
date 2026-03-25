@@ -7,14 +7,27 @@ import { Button } from "@/components/ui/button";
 import { mockPlayers, mockMatches } from "@/lib/mockData";
 import { formatDateBR } from "@/lib/formatDate";
 
-const statCards = [
-  { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },
-  { label: "Pontos", value: "38", icon: TrendingUp },
-  { label: "Palpites", value: "12", icon: Target },
-  { label: "Sequência", value: "3🔥", icon: Flame },
-];
-
 const Dashboard = () => {
+  const todayStr = (() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  })();
+
+  const todayUpcoming = mockMatches.filter(
+    (m) => m.date === todayStr && m.status === "upcoming"
+  );
+  const remainingBets = todayUpcoming.length;
+
+  const statCards = [
+    { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },
+    { label: "Pontos", value: "38", icon: TrendingUp },
+    { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target },
+    { label: "Em breve", value: "—", icon: Flame },
+  ];
+
   const nextMatches = [...mockMatches].filter((m) => m.status === "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 3);
 
   return (
