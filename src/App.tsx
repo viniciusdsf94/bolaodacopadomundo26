@@ -28,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/palpites" element={<Bets />} />
           <Route path="/historico" element={<GroupBets />} />
+          <Route path="/ao-vivo" element={<Live />} />
           <Route path="/partida/:id" element={<MatchDetails />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
