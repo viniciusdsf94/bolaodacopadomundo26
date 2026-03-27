@@ -7,22 +7,24 @@ import { mockMatches } from "@/lib/mockData";
 import { formatDateBR } from "@/lib/formatDate";
 
 const GroupBets = () => {
-  const finishedOrLive = [...mockMatches].filter((m) => m.status !== "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const finishedOrLive = [...mockMatches]
+    .filter((m) => m.status !== "upcoming")
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold">Palpites do Grupo</h1>
+          <h1 className="font-display text-2xl font-bold">Histórico</h1>
           <p className="text-muted-foreground text-sm">
-            Veja os palpites de todos após o início de cada partida
+            Todas as partidas já realizadas em ordem cronológica
           </p>
         </div>
 
         {finishedOrLive.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Nenhuma partida iniciada ainda.</p>
+            <p className="text-muted-foreground">Nenhuma partida realizada ainda.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -36,18 +38,25 @@ const GroupBets = () => {
                 <Link to={`/partida/${match.id}`}>
                   <div className="rounded-xl border border-border bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Flag src={match.flagA} alt={match.teamA} />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {match.teamA} vs {match.teamB}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDateBR(match.date)}
-                          </p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-xs text-muted-foreground leading-tight whitespace-nowrap">
+                          <p>{formatDateBR(match.date)}</p>
+                          <p>{match.time}</p>
                         </div>
-                        <Flag src={match.flagB} alt={match.teamB} />
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Flag src={match.flagA} alt={match.teamA} />
+                            <span className="text-sm font-medium">{match.teamA}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">vs</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{match.teamB}</span>
+                            <Flag src={match.flagB} alt={match.teamB} />
+                          </div>
+                        </div>
                       </div>
+
                       {match.status === "finished" && (
                         <span className="font-display font-bold text-foreground">
                           {match.scoreA} × {match.scoreB}

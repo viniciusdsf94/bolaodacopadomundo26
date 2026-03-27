@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
   { path: "/palpites", label: "Palpites", icon: ListChecks },
-  { path: "/grupo", label: "Grupo", icon: Users },
+  { path: "/historico", label: "Histórico", icon: Users },
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
