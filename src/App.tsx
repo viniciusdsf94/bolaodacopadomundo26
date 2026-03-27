@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Bets from "./pages/Bets";
 import GroupBets from "./pages/GroupBets";
+import Live from "./pages/Live";
 import MatchDetails from "./pages/MatchDetails";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
