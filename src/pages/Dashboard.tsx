@@ -20,12 +20,13 @@ const Dashboard = () => {
     (m) => m.date === todayStr && m.status === "upcoming"
   );
   const remainingBets = todayUpcoming.length;
+  const liveCount = mockMatches.filter((m) => m.status === "live").length;
 
   const statCards = [
-    { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },
-    { label: "Pontos", value: "38", icon: TrendingUp },
-    { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target },
-    { label: "Em breve", value: "—", icon: Flame },
+    { label: "Sua Posição", value: "2º", icon: Trophy, accent: true, link: undefined },
+    { label: "Pontos", value: "38", icon: TrendingUp, link: undefined },
+    { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target, link: undefined },
+    { label: "Jogos ao Vivo", value: String(liveCount), icon: Flame, link: "/ao-vivo" },
   ];
 
   const nextMatches = [...mockMatches].filter((m) => m.status === "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 3);
