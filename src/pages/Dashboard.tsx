@@ -20,12 +20,13 @@ const Dashboard = () => {
     (m) => m.date === todayStr && m.status === "upcoming"
   );
   const remainingBets = todayUpcoming.length;
+  const liveCount = mockMatches.filter((m) => m.status === "live").length;
 
   const statCards = [
-    { label: "Sua Posição", value: "2º", icon: Trophy, accent: true },
-    { label: "Pontos", value: "38", icon: TrendingUp },
-    { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target },
-    { label: "Em breve", value: "—", icon: Flame },
+    { label: "Sua Posição", value: "2º", icon: Trophy, accent: true, link: undefined },
+    { label: "Pontos", value: "38", icon: TrendingUp, link: undefined },
+    { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target, link: undefined },
+    { label: "Jogos ao Vivo", value: String(liveCount), icon: Flame, link: "/ao-vivo" },
   ];
 
   const nextMatches = [...mockMatches].filter((m) => m.status === "upcoming").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 3);
@@ -51,13 +52,26 @@ const Dashboard = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className={`rounded-xl border border-border p-4 ${
-                  stat.accent ? "bg-primary/10 border-primary/30" : "bg-gradient-card"
-                }`}
               >
-                <Icon className={`h-5 w-5 mb-2 ${stat.accent ? "text-primary" : "text-muted-foreground"}`} />
-                <p className="font-display text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                {stat.link ? (
+                  <Link to={stat.link} className="block">
+                    <div className={`rounded-xl border border-border p-4 hover:bg-secondary/50 transition-colors cursor-pointer ${
+                      stat.accent ? "bg-primary/10 border-primary/30" : "bg-gradient-card"
+                    }`}>
+                      <Icon className={`h-5 w-5 mb-2 ${stat.accent ? "text-primary" : "text-muted-foreground"}`} />
+                      <p className="font-display text-2xl font-bold">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className={`rounded-xl border border-border p-4 ${
+                    stat.accent ? "bg-primary/10 border-primary/30" : "bg-gradient-card"
+                  }`}>
+                    <Icon className={`h-5 w-5 mb-2 ${stat.accent ? "text-primary" : "text-muted-foreground"}`} />
+                    <p className="font-display text-2xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                )}
               </motion.div>
             );
           })}

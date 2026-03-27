@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Bets from "./pages/Bets";
 import GroupBets from "./pages/GroupBets";
+import Live from "./pages/Live";
 import MatchDetails from "./pages/MatchDetails";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/palpites" element={<Bets />} />
           <Route path="/historico" element={<GroupBets />} />
+          <Route path="/ao-vivo" element={<Live />} />
           <Route path="/partida/:id" element={<MatchDetails />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
