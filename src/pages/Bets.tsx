@@ -7,18 +7,23 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
-import { mockMatches } from "@/lib/mockData";
+import { useMatches, useMyBets, type Match } from "@/hooks/useMatches";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Bets = () => {
+  const { data: matches = [], isLoading } = useMatches();
+  const { data: myBets = [], refetch: refetchBets } = useMyBets();
+  const { user } = useAuth();
   const [bets, setBets] = useState<Record<string, { a: string; b: string }>>({});
+  const [saving, setSaving] = useState<string | null>(null);
 
-  // Get sorted unique dates
   const sortedDates = useMemo(() => {
-    const dates = [...new Set(mockMatches.map((m) => m.date))];
+    const dates = [...new Set(matches.map((m) => m.match_date))];
     return dates.sort((a, b) => a.localeCompare(b));
-  }, []);
+  }, [matches]);
 
-  // Find today's date or closest future date as default
   const todayStr = useMemo(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -37,11 +42,8 @@ const Bets = () => {
   const currentDate = sortedDates[dateIndex] ?? sortedDates[0];
 
   const matchesForDay = useMemo(
-    () =>
-      [...mockMatches]
-        .filter((m) => m.date === currentDate)
-        .sort((a, b) => a.time.localeCompare(b.time)),
-    [currentDate]
+    () => matches.filter((m) => m.match_date === currentDate),
+    [matches, currentDate]
   );
 
   const getDateLabel = (dateStr: string) => {
@@ -61,7 +63,7 @@ const Bets = () => {
     return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}. ${dayNum} de ${monthName}`;
   };
 
-  const dateLabel = getDateLabel(currentDate);
+  const dateLabel = currentDate ? getDateLabel(currentDate) : "";
 
   const handleChange = (matchId: string, team: "a" | "b", value: string) => {
     setBets((prev) => ({
@@ -69,6 +71,49 @@ const Bets = () => {
       [matchId]: { ...prev[matchId], [team]: value },
     }));
   };
+
+  const handleSave = async (match: Match) => {
+    if (!user) return;
+    const bet = bets[match.id];
+    if (!bet?.a || !bet?.b) {
+      toast.error("Preencha o placar dos dois times");
+      return;
+    }
+
+    setSaving(match.id);
+    const existingBet = myBets.find((b) => b.match_id === match.id);
+
+    if (existingBet) {
+      const { error } = await supabase
+        .from("bets")
+        .update({ score_a: parseInt(bet.a), score_b: parseInt(bet.b) })
+        .eq("id", existingBet.id);
+      if (error) toast.error("Erro ao atualizar palpite");
+      else toast.success("Palpite atualizado!");
+    } else {
+      const { error } = await supabase.from("bets").insert({
+        match_id: match.id,
+        user_id: user.id,
+        score_a: parseInt(bet.a),
+        score_b: parseInt(bet.b),
+      });
+      if (error) toast.error("Erro ao salvar palpite");
+      else toast.success("Palpite salvo!");
+    }
+
+    setSaving(null);
+    refetchBets();
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -121,6 +166,7 @@ const Bets = () => {
             ) : (
               matchesForDay.map((match, i) => {
                 const isLocked = match.status !== "upcoming";
+                const existingBet = myBets.find((b) => b.match_id === match.id);
                 return (
                   <motion.div
                     key={match.id}
@@ -142,7 +188,7 @@ const Bets = () => {
                           <Clock className="h-3.5 w-3.5 text-accent" />
                         )}
                         <span className="text-xs text-muted-foreground">
-                          <span className={`font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>{match.time}</span>
+                          <span className={`font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>{match.match_time?.slice(0, 5)}</span>
                           {match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
                         </span>
                       </div>
@@ -150,10 +196,9 @@ const Bets = () => {
 
                     {/* Score input */}
                     <div className="flex items-center justify-center gap-3">
-                      {/* Team A */}
                       <div className="flex flex-col items-center gap-1 flex-1">
-                        <Flag src={match.flagA} alt={match.teamA} />
-                        <span className="text-xs font-medium text-center leading-tight">{match.teamA}</span>
+                        <Flag src={match.flag_a} alt={match.team_a} />
+                        <span className="text-xs font-medium text-center leading-tight">{match.team_a}</span>
                       </div>
 
                       <Input
@@ -162,9 +207,9 @@ const Bets = () => {
                         max={20}
                         disabled={isLocked}
                         value={
-                          isLocked && match.scoreA !== undefined
-                            ? match.scoreA
-                            : bets[match.id]?.a ?? ""
+                          isLocked && match.score_a !== null
+                            ? match.score_a
+                            : bets[match.id]?.a ?? (existingBet ? String(existingBet.score_a) : "")
                         }
                         onChange={(e) => handleChange(match.id, "a", e.target.value)}
                         className="w-12 text-center font-display font-bold bg-secondary border-border"
@@ -178,18 +223,17 @@ const Bets = () => {
                         max={20}
                         disabled={isLocked}
                         value={
-                          isLocked && match.scoreB !== undefined
-                            ? match.scoreB
-                            : bets[match.id]?.b ?? ""
+                          isLocked && match.score_b !== null
+                            ? match.score_b
+                            : bets[match.id]?.b ?? (existingBet ? String(existingBet.score_b) : "")
                         }
                         onChange={(e) => handleChange(match.id, "b", e.target.value)}
                         className="w-12 text-center font-display font-bold bg-secondary border-border"
                       />
 
-                      {/* Team B */}
                       <div className="flex flex-col items-center gap-1 flex-1">
-                        <Flag src={match.flagB} alt={match.teamB} />
-                        <span className="text-xs font-medium text-center leading-tight">{match.teamB}</span>
+                        <Flag src={match.flag_b} alt={match.team_b} />
+                        <span className="text-xs font-medium text-center leading-tight">{match.team_b}</span>
                       </div>
                     </div>
 
@@ -203,8 +247,13 @@ const Bets = () => {
                         </Link>
                       )}
                       {!isLocked && (
-                        <Button size="sm" className="gap-1 text-xs">
-                          <Check className="h-3.5 w-3.5" /> Salvar
+                        <Button
+                          size="sm"
+                          className="gap-1 text-xs"
+                          disabled={saving === match.id}
+                          onClick={() => handleSave(match)}
+                        >
+                          <Check className="h-3.5 w-3.5" /> {saving === match.id ? "Salvando..." : "Salvar"}
                         </Button>
                       )}
                     </div>
