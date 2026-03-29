@@ -1,16 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Home, ListChecks, Users, Settings, LogOut } from "lucide-react";
+import { Trophy, Home, ListChecks, History, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
   { path: "/palpites", label: "Palpites", icon: ListChecks },
-  { path: "/historico", label: "Histórico", icon: Users },
+  { path: "/historico", label: "Histórico", icon: History },
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,7 +64,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-destructive"
-              onClick={() => navigate("/login")}
+              onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
             </Button>
