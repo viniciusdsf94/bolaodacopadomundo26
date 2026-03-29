@@ -64,7 +64,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-destructive"
-              onClick={() => navigate("/login")}
+              onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
             </Button>
