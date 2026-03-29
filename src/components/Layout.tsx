@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
   { path: "/palpites", label: "Palpites", icon: ListChecks },
-  { path: "/historico", label: "Histórico", icon: Users },
+  { path: "/historico", label: "Histórico", icon: History },
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
