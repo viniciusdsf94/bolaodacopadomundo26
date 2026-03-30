@@ -75,6 +75,10 @@ const Bets = () => {
 
   const handleSave = async (match: Match) => {
     if (!user) return;
+    if (isMatchStarted(match)) {
+      toast.error("Este jogo já começou!");
+      return;
+    }
     const bet = bets[match.id];
     if (!bet?.a || !bet?.b) {
       toast.error("Preencha o placar dos dois times");
