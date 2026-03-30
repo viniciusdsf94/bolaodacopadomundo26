@@ -41,7 +41,7 @@ const Dashboard = () => {
   ];
 
   const nextMatches = matches
-    .filter((m) => m.status === "upcoming")
+    .filter((m) => !isMatchStarted(m))
     .slice(0, 3);
 
   return (
