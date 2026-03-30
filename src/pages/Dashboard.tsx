@@ -23,11 +23,11 @@ const Dashboard = () => {
   })();
 
   const todayUpcoming = matches.filter(
-    (m) => m.match_date === todayStr && m.status === "upcoming"
+    (m) => m.match_date === todayStr && !isMatchStarted(m)
   );
   const todayBetMatchIds = new Set(myBets.filter((b) => todayUpcoming.some((m) => m.id === b.match_id)).map((b) => b.match_id));
   const remainingBets = todayUpcoming.filter((m) => !todayBetMatchIds.has(m.id)).length;
-  const liveCount = matches.filter((m) => m.status === "live").length;
+  const liveCount = matches.filter((m) => isMatchLive(m)).length;
 
   const totalPoints = myBets.reduce((sum, b) => sum + (b.points ?? 0), 0);
 
