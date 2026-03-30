@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useMatches, useMyBets } from "@/hooks/useMatches";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDateBR } from "@/lib/formatDate";
+import { isMatchStarted, isMatchLive } from "@/lib/matchTime";
 
 const Dashboard = () => {
   const { user } = useAuth();

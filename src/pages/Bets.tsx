@@ -166,7 +166,7 @@ const Bets = () => {
               </p>
             ) : (
               matchesForDay.map((match, i) => {
-                const isLocked = match.status !== "upcoming";
+                const isLocked = isMatchStarted(match);
                 const existingBet = myBets.find((b) => b.match_id === match.id);
                 return (
                   <motion.div
