@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatDateBR } from "@/lib/formatDate";
 import { Link } from "react-router-dom";
 import { Check, Lock, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { isMatchStarted } from "@/lib/matchTime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
