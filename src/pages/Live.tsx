@@ -5,10 +5,11 @@ import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { useMatches } from "@/hooks/useMatches";
 import { formatDateBR } from "@/lib/formatDate";
+import { isMatchLive } from "@/lib/matchTime";
 
 const Live = () => {
   const { data: matches = [], isLoading } = useMatches();
-  const liveMatches = matches.filter((m) => m.status === "live");
+  const liveMatches = matches.filter((m) => isMatchLive(m));
 
   if (isLoading) {
     return (

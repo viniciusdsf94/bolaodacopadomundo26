@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatDateBR } from "@/lib/formatDate";
 import { Link } from "react-router-dom";
 import { Check, Lock, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { isMatchStarted } from "@/lib/matchTime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,6 +75,10 @@ const Bets = () => {
 
   const handleSave = async (match: Match) => {
     if (!user) return;
+    if (isMatchStarted(match)) {
+      toast.error("Este jogo já começou!");
+      return;
+    }
     const bet = bets[match.id];
     if (!bet?.a || !bet?.b) {
       toast.error("Preencha o placar dos dois times");
@@ -165,7 +170,7 @@ const Bets = () => {
               </p>
             ) : (
               matchesForDay.map((match, i) => {
-                const isLocked = match.status !== "upcoming";
+                const isLocked = isMatchStarted(match);
                 const existingBet = myBets.find((b) => b.match_id === match.id);
                 return (
                   <motion.div
