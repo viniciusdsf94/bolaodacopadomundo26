@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Home, ListChecks, History, Settings, LogOut } from "lucide-react";
+import { Trophy, Home, ListChecks, History, Settings, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,7 +12,7 @@ const navItems = [
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
@@ -55,11 +55,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link to="/admin">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" title="Painel de Administração">
+                  <Shield className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="icon"

@@ -80,27 +80,32 @@ const Bets = () => {
       return;
     }
     const bet = bets[match.id];
-    if (!bet?.a || !bet?.b) {
+    const existingBet = myBets.find((b) => b.match_id === match.id);
+    
+    // Use existing bet values if not being edited
+    const scoreA = bet?.a || (existingBet ? String(existingBet.score_a) : "");
+    const scoreB = bet?.b || (existingBet ? String(existingBet.score_b) : "");
+    
+    if (!scoreA || !scoreB) {
       toast.error("Preencha o placar dos dois times");
       return;
     }
 
     setSaving(match.id);
-    const existingBet = myBets.find((b) => b.match_id === match.id);
 
     if (existingBet) {
       const { error } = await supabase
         .from("bets")
-        .update({ score_a: parseInt(bet.a), score_b: parseInt(bet.b) })
+        .update({ score_a: parseInt(scoreA), score_b: parseInt(scoreB) })
         .eq("id", existingBet.id);
       if (error) toast.error("Erro ao atualizar palpite");
-      else toast.success("Palpite atualizado!");
+      else toast.success("Palpite alterado com sucesso!");
     } else {
       const { error } = await supabase.from("bets").insert({
         match_id: match.id,
         user_id: user.id,
-        score_a: parseInt(bet.a),
-        score_b: parseInt(bet.b),
+        score_a: parseInt(scoreA),
+        score_b: parseInt(scoreB),
       });
       if (error) toast.error("Erro ao salvar palpite");
       else toast.success("Palpite salvo!");
@@ -258,7 +263,7 @@ const Bets = () => {
                           disabled={saving === match.id}
                           onClick={() => handleSave(match)}
                         >
-                          <Check className="h-3.5 w-3.5" /> {saving === match.id ? "Salvando..." : "Salvar"}
+                          <Check className="h-3.5 w-3.5" /> {saving === match.id ? "Salvando..." : existingBet ? "Editar" : "Salvar"}
                         </Button>
                       )}
                     </div>

@@ -17,7 +17,7 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
@@ -26,8 +26,11 @@ const Register = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      navigate("/login");
+      toast.success("Conta criada com sucesso!");
+      // Se a conta foi criada e o usuário está autenticado, redireciona ao dashboard
+      if (data.user) {
+        navigate("/dashboard");
+      }
     }
   };
 
