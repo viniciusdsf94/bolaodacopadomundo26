@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trophy, Mail, Lock, ArrowRight } from "lucide-react";
+import { Trophy, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,20 @@ import { toast } from "sonner";
 
 const Register = () => {
   const navigate = useNavigate();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error("Por favor, preencha nome e sobrenome");
+      return;
+    }
+
     setLoading(true);
     const { error, data } = await supabase.auth.signUp({
       email,
@@ -23,14 +31,41 @@ const Register = () => {
       options: { emailRedirectTo: window.location.origin },
     });
     setLoading(false);
+    
     if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Conta criada com sucesso!");
-      // Se a conta foi criada e o usuário está autenticado, redireciona ao dashboard
-      if (data.user) {
-        navigate("/dashboard");
+      // Traduzir mensagens de erro comuns
+      let errorMessage = error.message;
+      if (errorMessage.includes("already registered")) {
+        errorMessage = "Este e-mail já está registrado";
+      } else if (errorMessage.includes("Invalid email")) {
+        errorMessage = "E-mail inválido";
+      } else if (errorMessage.includes("Password")) {
+        errorMessage = "A senha deve ter pelo menos 6 caracteres";
       }
+      toast.error(errorMessage);
+      return;
+    }
+
+    if (data.user) {
+      // Tentar atualizar perfil do usuário
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (supabase as any)
+        .from("profiles")
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        })
+        .eq("id", data.user.id);
+
+      if (profileError) {
+        console.error("Profile error:", profileError);
+        console.warn("Perfil não pôde ser salvo, mas continuando com o registro...");
+        // Não retorna erro - permite que o usuário continue mesmo se o perfil não for salvo
+        // Isso será tratado depois quando o hook useProfile buscar os dados
+      }
+
+      toast.success("Conta criada com sucesso!");
+      navigate("/dashboard");
     }
   };
 
@@ -54,6 +89,40 @@ const Register = () => {
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-glow">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="João"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="pl-10 bg-secondary border-border"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Sobrenome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Silva"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="pl-10 bg-secondary border-border"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <div className="relative">

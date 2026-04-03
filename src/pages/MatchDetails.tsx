@@ -1,19 +1,106 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target } from "lucide-react";
+import { ArrowLeft, Target, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
+import { useAuth } from "@/hooks/useAuth";
 import { useMatches, useScoringRules, useBets } from "@/hooks/useMatches";
 import { formatDateBR } from "@/lib/formatDate";
+import { supabase } from "@/integrations/supabase/client";
+import { updateMatchBetsPoints, calculateBetPoints } from "@/lib/calculatePoints";
+import { getBetPointsBreakdown } from "@/lib/getBetPointsBreakdown";
 
 const MatchDetails = () => {
   const { id } = useParams();
+  const { isAdmin } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: matches = [] } = useMatches();
   const { data: scoringRules = [] } = useScoringRules();
   const { data: matchBets = [] } = useBets(id);
 
+  const [scoreA, setScoreA] = useState<string>("");
+  const [scoreB, setScoreB] = useState<string>("");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+
   const match = matches.find((m) => m.id === id);
+
+  // Debug logs
+  useEffect(() => {
+    if (!match || !matchBets.length || !scoringRules.length) return;
+
+    console.group("🔍 DEBUG - Detalhes da Partida");
+    
+    // Log 1: Resultado da Partida
+    console.log("📊 RESULTADO DA PARTIDA:");
+    console.log(`${match.team_a} ${match.score_a ?? "?"} × ${match.score_b ?? "?"} ${match.team_b}`);
+    console.log(`Multiplicador: ${match.multiplier}`);
+    console.log(`Status: ${match.status}`);
+    console.log("Resultado atual:", { score_a: match.score_a, score_b: match.score_b });
+
+    // Log 2: Palpites dos usuários
+    console.log("\n📋 PALPITES DOS USUÁRIOS:");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    matchBets.forEach((bet: any) => {
+      const profile = bet.profiles;
+      const name = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}` : "Sem Nome";
+      console.log(`${name}: ${bet.score_a} × ${bet.score_b} (Pontos no banco: ${bet.points})`);
+    });
+
+    // Log 3: Cálculo de pontos
+    console.log("\n🧮 CÁLCULO DE PONTOS ESPERADOS:");
+    if (match.score_a !== null && match.score_b !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      matchBets.forEach((bet: any) => {
+        const profile = bet.profiles;
+        const name = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}` : "Sem Nome";
+        
+        const expectedPoints = calculateBetPoints(
+          { score_a: bet.score_a, score_b: bet.score_b },
+          {
+            score_a: match.score_a,
+            score_b: match.score_b,
+            multiplier: match.multiplier,
+            scoring_rules: scoringRules,
+          }
+        );
+
+        console.log(`${name}:`);
+        console.log(`  - Palpite: ${bet.score_a} × ${bet.score_b}`);
+        console.log(`  - Resultado: ${match.score_a} × ${match.score_b}`);
+        console.log(`  - Pontos calculados: ${expectedPoints}`);
+        console.log(`  - Pontos no banco: ${bet.points}`);
+        console.log(`  - ✅ Correto: ${expectedPoints === bet.points}`);
+      });
+    } else {
+      console.log("⚠️ Resultado ainda não informado (score_a ou score_b é null)");
+    }
+
+    console.log("\n📜 REGRAS DE PONTUAÇÃO DISPONÍVEIS:");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    scoringRules.forEach((rule: any) => {
+      console.log(`${rule.label}: ${rule.points} pts`);
+    });
+
+    console.groupEnd();
+  }, [match, matchBets, scoringRules]);
 
   if (!match) {
     return (
@@ -22,6 +109,99 @@ const MatchDetails = () => {
       </Layout>
     );
   }
+
+  const handleConfirmResult = async () => {
+    console.log("🔴 handleConfirmResult CHAMADO!");
+    console.log(`   scoreA: ${scoreA}, scoreB: ${scoreB}, id: ${id}`);
+    
+    if (!id || !scoreA || !scoreB) {
+      console.log("❌ Campos vazios!");
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos do placar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const finalScoreA = parseInt(scoreA);
+    const finalScoreB = parseInt(scoreB);
+
+    if (isNaN(finalScoreA) || isNaN(finalScoreB)) {
+      toast({
+        title: "Erro",
+        description: "Os placar devem ser números válidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Atualizar o resultado da partida
+      console.log("🔵 ETAPA 1: Atualizando resultado da partida...");
+      const { error: updateError } = await supabase
+        .from("matches")
+        .update({
+          score_a: finalScoreA,
+          score_b: finalScoreB,
+          status: "finished",
+        })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+      console.log("✅ Resultado atualizado com sucesso!");
+
+      // 2. Calcular e atualizar os pontos de todas as apostas
+      console.log("🔵 ETAPA 2: Calculando e atualizando pontos das apostas...");
+      console.log(`   matchId: ${id}`);
+      console.log(`   score_a: ${finalScoreA}, score_b: ${finalScoreB}`);
+      
+      try {
+        await updateMatchBetsPoints(id, finalScoreA, finalScoreB);
+        console.log("✅ Pontos calculados e atualizados com sucesso!");
+      } catch (pointsError) {
+        console.error("❌ ERRO ao atualizar pontos:", pointsError);
+        throw pointsError;
+      }
+
+      // 3. Invalidar caches
+      console.log("🔵 ETAPA 3: Invalidando caches...");
+      await queryClient.invalidateQueries({ queryKey: ["matches"] });
+      await queryClient.invalidateQueries({ queryKey: ["my_bets"] });
+      await queryClient.invalidateQueries({ queryKey: ["bets"] });
+      // Força refetch do ranking
+      await queryClient.refetchQueries({ queryKey: ["ranking"] });
+      console.log("✅ Caches invalidados!");
+
+      toast({
+        title: "Sucesso",
+        description: "Resultado confirmado e pontos calculados!",
+      });
+
+      // Limpar formulário
+      setScoreA("");
+      setScoreB("");
+      setShowConfirmDialog(false);
+
+      // Recarregar dados após um pequeno delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (error as any).message || "Erro ao confirmar resultado.";
+      console.error("Erro ao confirmar resultado:", error);
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Layout>
@@ -74,20 +254,72 @@ const MatchDetails = () => {
 
         <div>
           <h2 className="font-display text-lg font-bold mb-3">Palpites do Grupo</h2>
-          {match.status === "upcoming" ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center">
+          {!isAdmin && match.status === "live" && (
+            <div className="rounded-xl border border-border bg-card p-4 text-center mb-4">
               <p className="text-muted-foreground text-sm">
-                Os palpites ficam disponíveis após o início da partida.
+                ⏱️ Partida em andamento. Resultado será informado em breve.
               </p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {matchBets.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-4">
-                  Nenhum palpite registrado para esta partida.
-                </p>
-              ) : (
-                matchBets.map((bet, i) => (
+          )}
+          {isAdmin && match.status === "live" && match.score_a === null && (
+            <div className="rounded-xl border border-accent bg-accent/5 p-4 mb-4">
+              <p className="text-sm font-medium mb-3">📊 Informar Resultado Final</p>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Gols {match.team_a}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={scoreA}
+                    onChange={(e) => setScoreA(e.target.value)}
+                    placeholder="0"
+                    className="font-display text-lg"
+                  />
+                </div>
+                <span className="text-xl font-bold">×</span>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Gols {match.team_b}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={scoreB}
+                    onChange={(e) => setScoreB(e.target.value)}
+                    placeholder="0"
+                    className="font-display text-lg"
+                  />
+                </div>
+                <Button
+                  onClick={() => setShowConfirmDialog(true)}
+                  disabled={isLoading}
+                  className="gap-1"
+                >
+                  <Check className="h-4 w-4" /> Confirmar
+                </Button>
+              </div>
+            </div>
+          )}
+          <div className="space-y-2">
+            {matchBets.length === 0 ? (
+              <p className="text-center text-muted-foreground text-sm py-4">
+                Nenhum palpite registrado para esta partida.
+              </p>
+            ) : (
+                matchBets.map((bet, i) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const profile = (bet as any).profiles;
+                  const displayName = profile?.first_name 
+                    ? `${profile.first_name} ${profile.last_name || ""}`.trim()
+                    : bet.user_id.slice(0, 8);
+                  const initials = displayName
+                    .split(" ")
+                    .map((word: string) => word[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2);
+
+                  return (
                   <motion.div
                     key={bet.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -96,23 +328,126 @@ const MatchDetails = () => {
                     className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
                   >
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary font-display font-bold text-sm">
-                      {bet.user_id.slice(0, 2).toUpperCase()}
+                      {initials}
                     </div>
-                    <span className="flex-1 text-sm font-medium">{bet.user_id.slice(0, 8)}</span>
+                    <span className="flex-1 text-sm font-medium">{displayName}</span>
                     <span className="font-display font-bold text-foreground">
                       {bet.score_a} × {bet.score_b}
                     </span>
                     {bet.points !== null && (
-                      <span className={`font-display font-bold text-sm ${bet.points > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                        {bet.points > 0 ? `+${bet.points}` : bet.points} pts
-                      </span>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenTooltipId(openTooltipId === bet.id ? null : bet.id);
+                          }}
+                          className={`font-display font-bold text-sm cursor-help ${bet.points > 0 ? "text-primary" : "text-muted-foreground"}`}
+                        >
+                          {bet.points > 0 ? `+${bet.points}` : bet.points} pts
+                        </button>
+
+                        {/* Tooltip Mobile/Click */}
+                        {openTooltipId === bet.id && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="absolute bottom-full right-0 mb-2 z-50 bg-popover border border-border rounded-md shadow-lg p-3 w-56 text-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {(() => {
+                              const breakdown = getBetPointsBreakdown(
+                                { score_a: bet.score_a, score_b: bet.score_b },
+                                {
+                                  score_a: match.score_a,
+                                  score_b: match.score_b,
+                                  multiplier: match.multiplier,
+                                  scoring_rules: scoringRules,
+                                }
+                              );
+
+                              const earnedRules = breakdown.rules.filter(r => r.earned);
+
+                              return (
+                                <div className="space-y-1">
+                                  {earnedRules.length > 0 ? (
+                                    <>
+                                      {earnedRules.map((rule, idx) => (
+                                        <div key={idx}>
+                                          <span>{rule.name}</span>
+                                          <span className="ml-1 font-bold text-primary">+{rule.points}</span>
+                                        </div>
+                                      ))}
+                                      {breakdown.multiplier > 1 && (
+                                        <div className="border-t border-border/50 pt-1 mt-1">
+                                          Subtotal: {breakdown.rules.reduce((acc, r) => acc + (r.earned ? r.points : 0), 0)}
+                                          <span className="ml-1">× {breakdown.multiplier}</span>
+                                        </div>
+                                      )}
+                                      <div className="font-bold text-primary border-t border-border/50 pt-1 mt-1">
+                                        Total: {breakdown.total}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-muted-foreground">
+                                      Nenhuma regra acertada
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            
+                            {/* Arrow do tooltip */}
+                            <div className="absolute top-full right-3 -mt-1">
+                              <div className="border-4 border-transparent border-t-popover"></div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Overlay para fechar ao clicar fora */}
+                        {openTooltipId === bet.id && (
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setOpenTooltipId(null)}
+                          />
+                        )}
+                      </div>
                     )}
                   </motion.div>
-                ))
+                  );
+                })
               )}
             </div>
-          )}
         </div>
+
+        {isAdmin && (
+          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>⚠️ Confirmar Resultado</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja confirmar o resultado como{" "}
+                  <span className="font-bold text-foreground">
+                    {scoreA} × {scoreB}
+                  </span>
+                  ? Esta ação vai calcular os pontos de todas as apostas e não poderá ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isLoading}>
+                  <X className="h-4 w-4 mr-1" /> Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmResult}
+                  disabled={isLoading}
+                  className="bg-primary"
+                >
+                  <Check className="h-4 w-4 mr-1" /> {isLoading ? "Confirmando..." : "Confirmar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </Layout>
   );

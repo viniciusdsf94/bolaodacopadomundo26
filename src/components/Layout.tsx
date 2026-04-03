@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Home, ListChecks, History, Settings, LogOut, Shield } from "lucide-react";
+import { Trophy, Home, ListChecks, History, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
   { path: "/palpites", label: "Palpites", icon: ListChecks },
+  { path: "/classificacao", label: "Classificação", icon: Trophy },
   { path: "/historico", label: "Histórico", icon: History },
 ];
 
@@ -19,12 +20,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     navigate("/login");
   };
 
+  // Filtrar itens de navegação: admins veem apenas dashboard
+  const filteredNavItems = isAdmin 
+    ? [navItems[0]] // Apenas Dashboard
+    : navItems; // Todos os itens
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
       <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2">
+          <Link to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Trophy className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -34,7 +40,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.path);
               return (
@@ -77,7 +83,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Mobile nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-xl md:hidden">
         <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname.startsWith(item.path);
             return (

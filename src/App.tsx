@@ -7,12 +7,14 @@ import { AuthProvider } from "@/hooks/useAuth";
 import RootRoute from "@/components/RootRoute";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
+import UserRoute from "@/components/UserRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Bets from "./pages/Bets";
 import GroupBets from "./pages/GroupBets";
 import Live from "./pages/Live";
+import Ranking from "./pages/Ranking";
 import MatchDetails from "./pages/MatchDetails";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -30,10 +32,11 @@ const App = () => (
             <Route path="/" element={<RootRoute />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Register />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/palpites" element={<ProtectedRoute><Bets /></ProtectedRoute>} />
-            <Route path="/historico" element={<ProtectedRoute><GroupBets /></ProtectedRoute>} />
-            <Route path="/ao-vivo" element={<ProtectedRoute><Live /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<UserRoute><Dashboard /></UserRoute>} />
+            <Route path="/palpites" element={<UserRoute><Bets /></UserRoute>} />
+            <Route path="/classificacao" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+            <Route path="/historico" element={<UserRoute><GroupBets /></UserRoute>} />
+            <Route path="/ao-vivo" element={<UserRoute><Live /></UserRoute>} />
             <Route path="/partida/:id" element={<ProtectedRoute><MatchDetails /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />

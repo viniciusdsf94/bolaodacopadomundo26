@@ -6,11 +6,13 @@ import Flag from "@/components/Flag";
 import { Button } from "@/components/ui/button";
 import { useMatches, useMyBets } from "@/hooks/useMatches";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { formatDateBR } from "@/lib/formatDate";
 import { isMatchStarted, isMatchLive } from "@/lib/matchTime";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { data: matches = [] } = useMatches();
   const { data: myBets = [] } = useMyBets();
 
@@ -31,7 +33,7 @@ const Dashboard = () => {
 
   const totalPoints = myBets.reduce((sum, b) => sum + (b.points ?? 0), 0);
 
-  const displayName = user?.email?.split("@")[0] ?? "Jogador";
+  const displayName = profile?.first_name ?? user?.email?.split("@")[0] ?? "Jogador";
 
   const statCards = [
     { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target, link: "/palpites" },

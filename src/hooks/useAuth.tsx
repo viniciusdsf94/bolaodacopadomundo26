@@ -30,10 +30,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .eq("role", "admin")
-        .single();
+        .eq("role", "admin");
       
-      setIsAdmin(!error && data?.role === "admin");
+      setIsAdmin(!error && Array.isArray(data) && data.length > 0 && data[0]?.role === "admin");
     } catch {
       setIsAdmin(false);
     }

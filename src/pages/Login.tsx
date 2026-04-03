@@ -20,7 +20,16 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      // Traduzir mensagens de erro comuns
+      let errorMessage = error.message;
+      if (errorMessage.includes("Invalid login credentials")) {
+        errorMessage = "E-mail ou senha incorretos";
+      } else if (errorMessage.includes("Email not confirmed")) {
+        errorMessage = "E-mail não confirmado. Por favor, confira seu e-mail";
+      } else if (errorMessage.includes("User not found")) {
+        errorMessage = "Usuário não encontrado";
+      }
+      toast.error(errorMessage);
     } else {
       navigate("/dashboard");
     }

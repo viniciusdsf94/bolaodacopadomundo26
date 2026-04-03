@@ -1,26 +1,62 @@
 import { useState } from "react";
-import { Plus, Save, Settings, CalendarDays } from "lucide-react";
+import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import TeamSelect from "@/components/TeamSelect";
 import { useMatches, useScoringRules } from "@/hooks/useMatches";
+import { useRanking } from "@/hooks/useRanking";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDateBR } from "@/lib/formatDate";
 import { toast } from "sonner";
+import { updateMatchBetsPoints } from "@/lib/calculatePoints";
+import { useEffect } from "react";
 
 const Admin = () => {
   const { data: matches = [] } = useMatches();
   const { data: rules = [] } = useScoringRules();
+  const { data: ranking = [] } = useRanking();
   const queryClient = useQueryClient();
 
   const [newMatch, setNewMatch] = useState({
     teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1",
   });
+
+  // Estado para o modal de confirmação
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    matchId: string;
+    teamA: string;
+    teamB: string;
+    scoreA: number;
+    scoreB: number;
+  }>({
+    isOpen: false,
+    matchId: "",
+    teamA: "",
+    teamB: "",
+    scoreA: 0,
+    scoreB: 0,
+  });
+
+  const [isConfirming, setIsConfirming] = useState(false);
+  
+  // Estado para controlar os inputs de score
+  const [scoreInputs, setScoreInputs] = useState<Record<string, { a: string; b: string }>>({});
 
   const handleAddMatch = async () => {
     if (!newMatch.teamA || !newMatch.teamB || !newMatch.date || !newMatch.time) return;
@@ -54,6 +90,103 @@ const Admin = () => {
     }
   };
 
+  const handleGoLive = async (matchId: string) => {
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({ status: "live" })
+        .eq("id", matchId);
+      
+      if (error) throw error;
+      
+      toast.success("Partida ao vivo! 🔴");
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+    } catch (error) {
+      toast.error("Erro ao colocar partida ao vivo");
+    }
+  };
+
+  // Nova função para abrir o modal de confirmação
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleFinishMatch = (match: any, scoreA: string, scoreB: string) => {
+    const finalScoreA = parseInt(scoreA);
+    const finalScoreB = parseInt(scoreB);
+    
+    if (isNaN(finalScoreA) || isNaN(finalScoreB)) {
+      toast.error("Insira placar válido (números inteiros)");
+      return;
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      matchId: match.id,
+      teamA: match.team_a,
+      teamB: match.team_b,
+      scoreA: finalScoreA,
+      scoreB: finalScoreB,
+    });
+  };
+
+  // Função para confirmar a finalização (atualiza resultado E calcula pontos)
+  const handleConfirmFinish = async () => {
+    if (!confirmDialog.matchId) return;
+
+    setIsConfirming(true);
+
+    try {
+      console.log("🔴 Confirmando finalização da partida...");
+      
+      // 1. Atualizar resultado da partida
+      console.log("🔵 ETAPA 1: Atualizando resultado da partida...");
+      const { error: updateError } = await supabase
+        .from("matches")
+        .update({
+          score_a: confirmDialog.scoreA,
+          score_b: confirmDialog.scoreB,
+          status: "finished",
+        })
+        .eq("id", confirmDialog.matchId);
+
+      if (updateError) throw updateError;
+      console.log("✅ Resultado atualizado com sucesso!");
+
+      // 2. Calcular e atualizar os pontos de todas as apostas
+      console.log("🔵 ETAPA 2: Calculando e atualizando pontos das apostas...");
+      await updateMatchBetsPoints(
+        confirmDialog.matchId,
+        confirmDialog.scoreA,
+        confirmDialog.scoreB
+      );
+      console.log("✅ Pontos calculados e atualizados com sucesso!");
+
+      // 3. Invalidar caches
+      console.log("🔵 ETAPA 3: Invalidando caches...");
+      await queryClient.invalidateQueries({ queryKey: ["matches"] });
+      await queryClient.invalidateQueries({ queryKey: ["my_bets"] });
+      await queryClient.invalidateQueries({ queryKey: ["bets"] });
+      await queryClient.refetchQueries({ queryKey: ["ranking"] });
+      console.log("✅ Caches invalidados!");
+
+      toast.success(`${confirmDialog.teamA} ${confirmDialog.scoreA}×${confirmDialog.scoreB} ${confirmDialog.teamB} - Pontos calculados!`);
+
+      // Fechar modal
+      setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0 });
+      
+      // Limpar input
+      setScoreInputs((prev) => ({
+        ...prev,
+        [confirmDialog.matchId]: { a: "", b: "" },
+      }));
+    } catch (error) {
+      console.error("❌ Erro ao confirmar partida:", error);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMsg = (error as any).message || "Erro ao confirmar partida";
+      toast.error(errorMsg);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   const handleUpdateRule = async (id: string, points: number) => {
     const { error } = await supabase
       .from("scoring_rules")
@@ -78,6 +211,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="rules" className="gap-1">
               <Settings className="h-4 w-4" /> Pontuação
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="gap-1">
+              <Trophy className="h-4 w-4" /> Classificação
             </TabsTrigger>
           </TabsList>
 
@@ -147,23 +283,76 @@ const Admin = () => {
                     <div className="flex items-center gap-2">
                       <Input
                         type="number" min={0} placeholder="0"
-                        defaultValue={match.score_a ?? ""}
-                        onBlur={(e) => {
-                          const scoreA = parseInt(e.target.value) || 0;
-                          handleUpdateResult(match.id, scoreA, match.score_b ?? 0);
+                        value={scoreInputs[match.id]?.a ?? match.score_a ?? ""}
+                        onChange={(e) => {
+                          setScoreInputs((prev) => ({
+                            ...prev,
+                            [match.id]: {
+                              a: e.target.value,
+                              b: prev[match.id]?.b ?? (match.score_b?.toString() || ""),
+                            },
+                          }));
                         }}
                         className="w-14 text-center bg-secondary border-border font-bold"
                       />
                       <span className="text-muted-foreground">×</span>
                       <Input
                         type="number" min={0} placeholder="0"
-                        defaultValue={match.score_b ?? ""}
-                        onBlur={(e) => {
-                          const scoreB = parseInt(e.target.value) || 0;
-                          handleUpdateResult(match.id, match.score_a ?? 0, scoreB);
+                        value={scoreInputs[match.id]?.b ?? match.score_b ?? ""}
+                        onChange={(e) => {
+                          setScoreInputs((prev) => ({
+                            ...prev,
+                            [match.id]: {
+                              a: prev[match.id]?.a ?? (match.score_a?.toString() || ""),
+                              b: e.target.value,
+                            },
+                          }));
                         }}
                         className="w-14 text-center bg-secondary border-border font-bold"
                       />
+                    </div>
+                    <div className="flex gap-2">
+                      {match.status !== "live" && match.status !== "finished" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleGoLive(match.id)}
+                          className="gap-1"
+                        >
+                          <Radio className="h-4 w-4" />
+                          Ao Vivo
+                        </Button>
+                      )}
+                      
+                      {match.status === "live" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() =>
+                            handleFinishMatch(
+                              match,
+                              scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
+                              scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
+                            )
+                          }
+                          className="gap-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Finalizar
+                        </Button>
+                      )}
+
+                      {match.status === "finished" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className="gap-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Finalizada
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -193,7 +382,83 @@ const Admin = () => {
               </div>
             ))}
           </TabsContent>
+
+          <TabsContent value="ranking" className="space-y-3 mt-4">
+            <div className="rounded-xl border border-border bg-gradient-card p-4">
+              <h3 className="font-display font-bold text-sm mb-4">Classificação Geral</h3>
+              
+              {ranking.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhuma classificação disponível ainda
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {ranking.map((player, index) => {
+                    const medal =
+                      index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}º`;
+                    return (
+                      <motion.div
+                        key={player.user_id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between rounded-lg border border-border bg-card/50 p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl font-bold w-8 text-center">{medal}</span>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {player.first_name} {player.last_name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-accent">{player.total_points}</p>
+                          <p className="text-xs text-muted-foreground">pontos</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
+
+        {/* Modal de confirmação de finalização */}
+        <AlertDialog open={confirmDialog.isOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0 });
+          }
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Finalizar Partida?</AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="space-y-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  {confirmDialog.teamA} <span className="text-accent">{confirmDialog.scoreA}</span>
+                  {" "}×{" "}
+                  <span className="text-accent">{confirmDialog.scoreB}</span> {confirmDialog.teamB}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Os pontos serão calculados automaticamente para todos os palpites!
+                </p>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isConfirming}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmFinish}
+                disabled={isConfirming}
+                className="bg-accent"
+              >
+                {isConfirming ? "Finalizando..." : "Confirmar e Calcular Pontos"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

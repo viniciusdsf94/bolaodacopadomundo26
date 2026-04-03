@@ -26,13 +26,9 @@ export const isMatchStarted = (match: Pick<Match, "match_date" | "match_time">) 
 
 /**
  * Returns true if the match is currently live.
- * A match is considered live if it started less than ~3 hours ago
- * (rough estimate; admin should update status for precision).
+ * A match is considered live ONLY if status is "live".
+ * Finished matches should not appear as live, regardless of time.
  */
 export const isMatchLive = (match: Pick<Match, "match_date" | "match_time" | "status">) => {
-  if (match.status === "live") return true;
-  const now = nowInBRT();
-  const start = matchDateTimeBRT(match);
-  const elapsed = (now.getTime() - start.getTime()) / (1000 * 60);
-  return elapsed >= 0 && elapsed <= 180; // within 3 hours of start
+  return match.status === "live";
 };
