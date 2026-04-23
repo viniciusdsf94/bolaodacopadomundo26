@@ -183,75 +183,82 @@ const Bets = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`rounded-xl border p-4 ${
+                    className={`relative rounded-xl border p-4 text-center ${
                       isLocked
                         ? "border-border bg-card opacity-70"
                         : "border-primary/20 bg-gradient-card shadow-glow"
                     }`}
                   >
                     {/* Match header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-1">
-                        {isLocked ? (
-                          <Lock className="h-3.5 w-3.5 text-destructive" />
-                        ) : (
-                          <Clock className="h-3.5 w-3.5 text-accent" />
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          <span className={`font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>{match.match_time?.slice(0, 5)}</span>
-                          {match.multiplier > 1 ? ` • ×${match.multiplier}` : ""}
-                        </span>
-                      </div>
+                    <div className="absolute top-3 left-4 text-left flex items-center gap-1">
+                      {isLocked ? (
+                        <Lock className="h-3 w-3 text-destructive" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-accent" />
+                      )}
+                      <span className={`text-[10px] sm:text-xs font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>
+                        {match.match_time?.slice(0, 5)}
+                      </span>
                     </div>
 
+                    {match.multiplier > 1 && (
+                      <div className="absolute top-3 right-4">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/20 text-accent">
+                          ×{match.multiplier}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Score input */}
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="flex flex-col items-center gap-1 flex-1">
-                        <Flag src={match.flag_a} alt={match.team_a} />
-                        <span className="text-xs font-medium text-center leading-tight">{match.team_a}</span>
+                    <div className="flex items-center justify-center gap-4 mt-6">
+                      <div className="flex flex-col items-center gap-1.5 w-[80px]">
+                        <Flag src={match.flag_a} alt={match.team_a} size="lg" />
+                        <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_a}</span>
                       </div>
 
-                      <Input
-                        type="number"
-                        min={0}
-                        max={20}
-                        disabled={isLocked}
-                        value={
-                          isLocked && match.score_a !== null
-                            ? match.score_a
-                            : bets[match.id]?.a ?? (existingBet ? String(existingBet.score_a) : "")
-                        }
-                        onChange={(e) => handleChange(match.id, "a", e.target.value)}
-                        className="w-12 text-center font-display font-bold bg-secondary border-border"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={20}
+                          disabled={isLocked}
+                          value={
+                            isLocked && match.score_a !== null
+                              ? match.score_a
+                              : bets[match.id]?.a ?? (existingBet ? String(existingBet.score_a) : "")
+                          }
+                          onChange={(e) => handleChange(match.id, "a", e.target.value)}
+                          className="w-12 h-12 text-center font-display text-xl font-black bg-secondary border-border rounded-xl"
+                        />
 
-                      <span className="text-muted-foreground font-bold">×</span>
+                        <span className="text-muted-foreground font-medium text-lg">×</span>
 
-                      <Input
-                        type="number"
-                        min={0}
-                        max={20}
-                        disabled={isLocked}
-                        value={
-                          isLocked && match.score_b !== null
-                            ? match.score_b
-                            : bets[match.id]?.b ?? (existingBet ? String(existingBet.score_b) : "")
-                        }
-                        onChange={(e) => handleChange(match.id, "b", e.target.value)}
-                        className="w-12 text-center font-display font-bold bg-secondary border-border"
-                      />
+                        <Input
+                          type="number"
+                          min={0}
+                          max={20}
+                          disabled={isLocked}
+                          value={
+                            isLocked && match.score_b !== null
+                              ? match.score_b
+                              : bets[match.id]?.b ?? (existingBet ? String(existingBet.score_b) : "")
+                          }
+                          onChange={(e) => handleChange(match.id, "b", e.target.value)}
+                          className="w-12 h-12 text-center font-display text-xl font-black bg-secondary border-border rounded-xl"
+                        />
+                      </div>
 
-                      <div className="flex flex-col items-center gap-1 flex-1">
-                        <Flag src={match.flag_b} alt={match.team_b} />
-                        <span className="text-xs font-medium text-center leading-tight">{match.team_b}</span>
+                      <div className="flex flex-col items-center gap-1.5 w-[80px]">
+                        <Flag src={match.flag_b} alt={match.team_b} size="lg" />
+                        <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_b}</span>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-center mt-3 gap-2">
+                    <div className="flex items-center justify-center mt-5 gap-2">
                       {match.status === "finished" && (
                         <Link to={`/partida/${match.id}`}>
-                          <Button variant="ghost" size="sm" className="text-xs text-primary">
+                          <Button variant="ghost" size="sm" className="text-xs text-primary h-8">
                             Ver detalhes
                           </Button>
                         </Link>
@@ -259,7 +266,7 @@ const Bets = () => {
                       {!isLocked && (
                         <Button
                           size="sm"
-                          className="gap-1 text-xs"
+                          className="gap-1 text-xs h-8"
                           disabled={saving === match.id}
                           onClick={() => handleSave(match)}
                         >
