@@ -8,6 +8,7 @@ export interface Profile {
   last_name: string;
   created_at: string;
   updated_at: string;
+  previous_position?: number;
 }
 
 export const useProfile = () => {

@@ -42,66 +42,6 @@ const MatchDetails = () => {
 
   const match = matches.find((m) => m.id === id);
 
-  // Debug logs
-  useEffect(() => {
-    if (!match || !matchBets.length || !scoringRules.length) return;
-
-    console.group("🔍 DEBUG - Detalhes da Partida");
-    
-    // Log 1: Resultado da Partida
-    console.log("📊 RESULTADO DA PARTIDA:");
-    console.log(`${match.team_a} ${match.score_a ?? "?"} × ${match.score_b ?? "?"} ${match.team_b}`);
-    console.log(`Multiplicador: ${match.multiplier}`);
-    console.log(`Status: ${match.status}`);
-    console.log("Resultado atual:", { score_a: match.score_a, score_b: match.score_b });
-
-    // Log 2: Palpites dos usuários
-    console.log("\n📋 PALPITES DOS USUÁRIOS:");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    matchBets.forEach((bet: any) => {
-      const profile = bet.profiles;
-      const name = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}` : "Sem Nome";
-      console.log(`${name}: ${bet.score_a} × ${bet.score_b} (Pontos no banco: ${bet.points})`);
-    });
-
-    // Log 3: Cálculo de pontos
-    console.log("\n🧮 CÁLCULO DE PONTOS ESPERADOS:");
-    if (match.score_a !== null && match.score_b !== null) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      matchBets.forEach((bet: any) => {
-        const profile = bet.profiles;
-        const name = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}` : "Sem Nome";
-        
-        const expectedPoints = calculateBetPoints(
-          { score_a: bet.score_a, score_b: bet.score_b },
-          {
-            score_a: match.score_a,
-            score_b: match.score_b,
-            multiplier: match.multiplier,
-            scoring_rules: scoringRules,
-          }
-        );
-
-        console.log(`${name}:`);
-        console.log(`  - Palpite: ${bet.score_a} × ${bet.score_b}`);
-        console.log(`  - Resultado: ${match.score_a} × ${match.score_b}`);
-        console.log(`  - Pontos calculados: ${expectedPoints}`);
-        console.log(`  - Pontos no banco: ${bet.points}`);
-        console.log(`  - ✅ Correto: ${expectedPoints === bet.points}`);
-      });
-    } else {
-      console.log("⚠️ Resultado ainda não informado (score_a ou score_b é null)");
-    }
-
-    console.log("\n📜 REGRAS DE PONTUAÇÃO DISPONÍVEIS:");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    scoringRules.forEach((rule: any) => {
-      console.log(`${rule.label}: ${rule.points} pts`);
-    });
-
-    console.groupEnd();
-  }, [match, matchBets, scoringRules]);
-
   if (!match) {
     return (
       <Layout>
@@ -111,11 +51,7 @@ const MatchDetails = () => {
   }
 
   const handleConfirmResult = async () => {
-    console.log("🔴 handleConfirmResult CHAMADO!");
-    console.log(`   scoreA: ${scoreA}, scoreB: ${scoreB}, id: ${id}`);
-    
     if (!id || !scoreA || !scoreB) {
-      console.log("❌ Campos vazios!");
       toast({
         title: "Erro",
         description: "Preencha todos os campos do placar.",
@@ -140,7 +76,6 @@ const MatchDetails = () => {
 
     try {
       // 1. Atualizar o resultado da partida
-      console.log("🔵 ETAPA 1: Atualizando resultado da partida...");
       const { error: updateError } = await supabase
         .from("matches")
         .update({
@@ -151,29 +86,22 @@ const MatchDetails = () => {
         .eq("id", id);
 
       if (updateError) throw updateError;
-      console.log("✅ Resultado atualizado com sucesso!");
 
       // 2. Calcular e atualizar os pontos de todas as apostas
-      console.log("🔵 ETAPA 2: Calculando e atualizando pontos das apostas...");
-      console.log(`   matchId: ${id}`);
-      console.log(`   score_a: ${finalScoreA}, score_b: ${finalScoreB}`);
       
       try {
         await updateMatchBetsPoints(id, finalScoreA, finalScoreB);
-        console.log("✅ Pontos calculados e atualizados com sucesso!");
       } catch (pointsError) {
         console.error("❌ ERRO ao atualizar pontos:", pointsError);
         throw pointsError;
       }
 
       // 3. Invalidar caches
-      console.log("🔵 ETAPA 3: Invalidando caches...");
       await queryClient.invalidateQueries({ queryKey: ["matches"] });
       await queryClient.invalidateQueries({ queryKey: ["my_bets"] });
       await queryClient.invalidateQueries({ queryKey: ["bets"] });
       // Força refetch do ranking
       await queryClient.refetchQueries({ queryKey: ["ranking"] });
-      console.log("✅ Caches invalidados!");
 
       toast({
         title: "Sucesso",
@@ -215,42 +143,34 @@ const MatchDetails = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl border border-border bg-gradient-card p-6 text-center"
+          className="rounded-2xl border border-border bg-gradient-card p-6 text-center relative"
         >
-          {match.multiplier > 1 && <p className="text-xs font-bold text-accent mb-2">Multiplicador ×{match.multiplier}</p>}
-          <div className="flex items-center justify-center gap-6">
+          <div className="absolute top-4 left-4 text-left">
+            <p className="text-xs text-muted-foreground font-medium">{formatDateBR(match.match_date)} • {match.match_time?.slice(0, 5)}</p>
+          </div>
+          {match.multiplier > 1 && (
+            <div className="absolute top-4 right-4 text-right">
+              <p className="text-xs font-bold text-accent">Multiplicador ×{match.multiplier}</p>
+            </div>
+          )}
+          <div className="flex items-center justify-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1">
               <Flag src={match.flag_a} alt={match.team_a} size="lg" />
               <span className="text-sm font-medium">{match.team_a}</span>
             </div>
             <div className="font-display text-4xl font-black text-foreground">
-              {match.score_a ?? "-"} <span className="text-muted-foreground">:</span> {match.score_b ?? "-"}
+              {match.status === "finished" ? (
+                <>{match.score_a} <span className="text-muted-foreground">×</span> {match.score_b}</>
+              ) : (
+                <span className="text-muted-foreground">×</span>
+              )}
             </div>
             <div className="flex flex-col items-center gap-1">
               <Flag src={match.flag_b} alt={match.team_b} size="lg" />
               <span className="text-sm font-medium">{match.team_b}</span>
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{formatDateBR(match.match_date)} • {match.match_time?.slice(0, 5)}</p>
         </motion.div>
-
-        <div>
-          <h2 className="font-display text-lg font-bold mb-3">Regras de Pontuação</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {scoringRules.map((rule) => (
-              <div key={rule.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
-                  <Target className="h-4 w-4 text-accent" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{rule.label}</p>
-                  <p className="text-xs text-muted-foreground">{rule.description}</p>
-                </div>
-                <span className="font-display font-bold text-primary text-sm">+{rule.points}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
         <div>
           <h2 className="font-display text-lg font-bold mb-3">Palpites do Grupo</h2>
@@ -418,6 +338,35 @@ const MatchDetails = () => {
                 })
               )}
             </div>
+        </div>
+
+        <div>
+          <h2 className="font-display text-lg font-bold mb-3">Regras de Pontuação</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {scoringRules.map((rule) => (
+              <div key={rule.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+                  <Target className="h-4 w-4 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{rule.label}</p>
+                  <p className="text-xs text-muted-foreground">{rule.description}</p>
+                </div>
+                <div className="font-display font-bold text-primary text-sm text-right whitespace-nowrap">
+                  {match.multiplier > 1 ? (
+                    <span className="flex items-center gap-1 justify-end">
+                      <span className="text-xs font-normal text-muted-foreground">
+                        +{rule.points} × {match.multiplier} =
+                      </span>
+                      +{rule.points * match.multiplier}
+                    </span>
+                  ) : (
+                    <span>+{rule.points}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {isAdmin && (

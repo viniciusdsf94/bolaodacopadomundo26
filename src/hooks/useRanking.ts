@@ -65,3 +65,94 @@ export const useRanking = () => {
     gcTime: 5 * 60 * 1000, // Garbage collection após 5 minutos
   });
 };
+
+export interface ChartDataPoint {
+  date: string;
+  [userId: string]: string | number; // userId -> position
+}
+
+export const useHistoricalRanking = () => {
+  return useQuery({
+    queryKey: ["historical_ranking"],
+    queryFn: async () => {
+      // 1. Fetch finished matches
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: matchesData, error: matchesError } = await (supabase as any)
+        .from("matches")
+        .select("id, match_date, status")
+        .eq("status", "finished")
+        .order("match_date", { ascending: true });
+
+      if (matchesError) throw new Error(matchesError.message);
+
+      // 2. Fetch all bets
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: betsData, error: betsError } = await (supabase as any)
+        .from("bets")
+        .select("match_id, user_id, points");
+
+      if (betsError) throw new Error(betsError.message);
+
+      // 3. Fetch all profiles
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profilesData, error: profilesError } = await (supabase as any)
+        .from("profiles")
+        .select("id, first_name, last_name");
+
+      if (profilesError) throw new Error(profilesError.message);
+
+      if (!matchesData || matchesData.length === 0) return { chartData: [], users: profilesData || [] };
+
+      // Map match_id to match_date
+      const matchDates: Record<string, string> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      matchesData.forEach((m: any) => {
+        matchDates[m.id] = m.match_date;
+      });
+
+      // Get unique sorted dates
+      const uniqueDates = Array.from(new Set(Object.values(matchDates))).sort();
+
+      const chartData: ChartDataPoint[] = [];
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userList = profilesData || [];
+
+      // For each date, compute cumulative points
+      const cumulativePoints: Record<string, number> = {};
+      userList.forEach(u => cumulativePoints[u.id] = 0);
+
+      uniqueDates.forEach((date) => {
+        // Find matches that happened exactly on this date
+        const matchesOnDate = matchesData.filter(m => m.match_date === date).map(m => m.id);
+        
+        // Add points for bets on those matches
+        betsData.forEach(bet => {
+          if (matchesOnDate.includes(bet.match_id) && bet.points) {
+            cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
+          }
+        });
+
+        // Compute rankings for this date
+        const rankingForDate = userList.map(u => ({
+          userId: u.id,
+          points: cumulativePoints[u.id] || 0
+        })).sort((a, b) => b.points - a.points);
+
+        // Assign positions (handling ties could mean same position, but simple index + 1 is fine for now)
+        const dataPoint: ChartDataPoint = { date };
+        rankingForDate.forEach((r, idx) => {
+          dataPoint[r.userId] = idx + 1;
+        });
+
+        chartData.push(dataPoint);
+      });
+
+      return {
+        chartData,
+        users: userList
+      };
+    },
+    staleTime: 30000,
+  });
+};

@@ -35,8 +35,21 @@ export function getBetPointsBreakdown(
   const ruleDiferenca = match.scoring_rules.find(r => r.label.toLowerCase().includes("diferença"));
   const ruleGolsVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do vencedor"));
   const ruleGolsPerdedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do perdedor"));
+  const ruleEmpateGarantido = match.scoring_rules.find(r => r.label.toLowerCase().includes("empate garantido"));
 
   let totalBeforeMultiplier = 0;
+
+  // 0. Empate Garantido
+  const isBetDraw = bet.score_a === bet.score_b;
+  const drawPoints = ruleEmpateGarantido?.points || 0;
+  if (ruleEmpateGarantido) {
+    breakdown.rules.push({
+      name: ruleEmpateGarantido.label || "Empate Garantido",
+      points: drawPoints,
+      earned: isBetDraw,
+    });
+    if (isBetDraw) totalBeforeMultiplier += drawPoints;
+  }
 
   // 1. Placar Exato
   const exactMatch = bet.score_a === match.score_a && bet.score_b === match.score_b;
@@ -48,8 +61,8 @@ export function getBetPointsBreakdown(
   });
 
   if (exactMatch) {
-    totalBeforeMultiplier = exactPoints;
-    breakdown.total = exactPoints * match.multiplier;
+    totalBeforeMultiplier += exactPoints;
+    breakdown.total = totalBeforeMultiplier * match.multiplier;
     return breakdown;
   }
 

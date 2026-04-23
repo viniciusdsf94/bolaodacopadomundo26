@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDateBR } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { updateMatchBetsPoints } from "@/lib/calculatePoints";
+import { isMatchLive } from "@/lib/matchTime";
 import { useEffect } from "react";
 
 const Admin = () => {
@@ -31,6 +32,28 @@ const Admin = () => {
   const { data: rules = [] } = useScoringRules();
   const { data: ranking = [] } = useRanking();
   const queryClient = useQueryClient();
+
+  // Garante que a regra "Empate Garantido" exista
+  useEffect(() => {
+    if (rules.length > 0) {
+      const hasEmpate = rules.some(r => r.label.toLowerCase().includes("empate garantido"));
+      if (!hasEmpate) {
+        supabase.from("scoring_rules").insert({
+          label: "Empate Garantido",
+          description: "Pontos garantidos ao apostar em um empate, independente do resultado",
+          points: 1
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["scoring_rules"] });
+        });
+      }
+    }
+  }, [rules, queryClient]);
+
+  const sortedMatches = [...matches].sort((a, b) => {
+    if (a.status === "finished" && b.status !== "finished") return 1;
+    if (a.status !== "finished" && b.status === "finished") return -1;
+    return 0;
+  });
 
   const [newMatch, setNewMatch] = useState({
     teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1",
@@ -134,10 +157,7 @@ const Admin = () => {
     setIsConfirming(true);
 
     try {
-      console.log("🔴 Confirmando finalização da partida...");
-      
       // 1. Atualizar resultado da partida
-      console.log("🔵 ETAPA 1: Atualizando resultado da partida...");
       const { error: updateError } = await supabase
         .from("matches")
         .update({
@@ -148,24 +168,19 @@ const Admin = () => {
         .eq("id", confirmDialog.matchId);
 
       if (updateError) throw updateError;
-      console.log("✅ Resultado atualizado com sucesso!");
 
       // 2. Calcular e atualizar os pontos de todas as apostas
-      console.log("🔵 ETAPA 2: Calculando e atualizando pontos das apostas...");
       await updateMatchBetsPoints(
         confirmDialog.matchId,
         confirmDialog.scoreA,
         confirmDialog.scoreB
       );
-      console.log("✅ Pontos calculados e atualizados com sucesso!");
 
       // 3. Invalidar caches
-      console.log("🔵 ETAPA 3: Invalidando caches...");
       await queryClient.invalidateQueries({ queryKey: ["matches"] });
       await queryClient.invalidateQueries({ queryKey: ["my_bets"] });
       await queryClient.invalidateQueries({ queryKey: ["bets"] });
       await queryClient.refetchQueries({ queryKey: ["ranking"] });
-      console.log("✅ Caches invalidados!");
 
       toast.success(`${confirmDialog.teamA} ${confirmDialog.scoreA}×${confirmDialog.scoreB} ${confirmDialog.teamB} - Pontos calculados!`);
 
@@ -260,7 +275,7 @@ const Admin = () => {
             </div>
 
             <div className="space-y-2">
-              {matches.map((match, i) => (
+              {sortedMatches.map((match, i) => (
                 <motion.div
                   key={match.id}
                   initial={{ opacity: 0 }}
@@ -312,7 +327,7 @@ const Admin = () => {
                       />
                     </div>
                     <div className="flex gap-2">
-                      {match.status !== "live" && match.status !== "finished" && (
+                      {!isMatchLive(match) && match.status !== "finished" && (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -324,7 +339,7 @@ const Admin = () => {
                         </Button>
                       )}
                       
-                      {match.status === "live" && (
+                      {isMatchLive(match) && (
                         <Button
                           size="sm"
                           variant="default"
@@ -346,11 +361,17 @@ const Admin = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled
-                          className="gap-1"
+                          onClick={() =>
+                            handleFinishMatch(
+                              match,
+                              scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
+                              scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
+                            )
+                          }
+                          className="gap-1 border-accent text-accent hover:bg-accent/10"
                         >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Finalizada
+                          <Save className="h-4 w-4" />
+                          Editar
                         </Button>
                       )}
                     </div>
@@ -433,7 +454,7 @@ const Admin = () => {
         }}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Finalizar Partida?</AlertDialogTitle>
+              <AlertDialogTitle>Salvar Resultado?</AlertDialogTitle>
             </AlertDialogHeader>
             <div className="space-y-3">
               <div className="text-center">
@@ -454,7 +475,7 @@ const Admin = () => {
                 disabled={isConfirming}
                 className="bg-accent"
               >
-                {isConfirming ? "Finalizando..." : "Confirmar e Calcular Pontos"}
+                {isConfirming ? "Salvando..." : "Confirmar e Calcular Pontos"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

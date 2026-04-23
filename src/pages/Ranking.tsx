@@ -1,10 +1,18 @@
 import { Trophy } from "lucide-react";
 import { motion } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Layout from "@/components/Layout";
-import { useRanking } from "@/hooks/useRanking";
+import { useRanking, useHistoricalRanking } from "@/hooks/useRanking";
+
+const COLORS = [
+  '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
+  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+  '#eab308', '#06b6d4', '#d946ef', '#f43f5e', '#a855f7'
+];
 
 const Ranking = () => {
   const { data: ranking = [], isLoading } = useRanking();
+  const { data: historical = { chartData: [], users: [] }, isLoading: isHistoricalLoading } = useHistoricalRanking();
 
   const getMedalIcon = (position: number) => {
     if (position === 1) return "🥇";
@@ -13,7 +21,7 @@ const Ranking = () => {
     return null;
   };
 
-  if (isLoading) {
+  if (isLoading || isHistoricalLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center py-12">
@@ -22,6 +30,9 @@ const Ranking = () => {
       </Layout>
     );
   }
+
+  const displayChartData = historical.chartData;
+  const displayUsers = historical.users;
 
   return (
     <Layout>
@@ -90,6 +101,64 @@ const Ranking = () => {
             })
           )}
         </div>
+
+        {displayChartData.length > 1 && (
+          <div className="rounded-lg border border-border bg-card p-4 overflow-hidden mt-6">
+            <h3 className="font-display font-bold mb-4 flex items-center gap-2">
+              📈 Histórico de Posições
+            </h3>
+          <div className="w-full h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={displayChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#888888" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false}
+                  tickFormatter={(value) => {
+                    const [y, m, d] = value.split('-');
+                    return `${d}/${m}`;
+                  }}
+                />
+                <YAxis 
+                  reversed 
+                  stroke="#888888" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickCount={displayUsers.length || 1}
+                  domain={[1, displayUsers.length || 1]}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', borderRadius: '0.5rem' }}
+                  itemStyle={{ fontSize: '12px' }}
+                  labelStyle={{ color: '#9ca3af', marginBottom: '0.5rem', fontSize: '12px' }}
+                  labelFormatter={(label) => {
+                    const [y, m, d] = label.split('-');
+                    return `${d}/${m}/${y}`;
+                  }}
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                />
+                {displayUsers.map((user, index) => (
+                  <Line
+                    key={user.id}
+                    type="monotone"
+                    dataKey={user.id}
+                    name={`${user.first_name} ${user.last_name || ''}`.trim()}
+                    stroke={COLORS[index % COLORS.length]}
+                    strokeWidth={3}
+                    activeDot={{ r: 6 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        )}
 
         {ranking.length > 0 && (
           <div className="rounded-lg border border-border bg-card p-4">

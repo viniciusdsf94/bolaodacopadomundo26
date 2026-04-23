@@ -26,9 +26,10 @@ export const isMatchStarted = (match: Pick<Match, "match_date" | "match_time">) 
 
 /**
  * Returns true if the match is currently live.
- * A match is considered live ONLY if status is "live".
+ * A match is considered live if its status is "live" OR if it has started and is not "finished".
  * Finished matches should not appear as live, regardless of time.
  */
 export const isMatchLive = (match: Pick<Match, "match_date" | "match_time" | "status">) => {
-  return match.status === "live";
+  if (match.status === "finished") return false;
+  return match.status === "live" || isMatchStarted(match);
 };

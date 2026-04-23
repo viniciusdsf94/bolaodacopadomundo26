@@ -40,6 +40,12 @@ export function calculateBetPoints(
   const ruleDiferenca = match.scoring_rules.find(r => r.label.toLowerCase().includes("diferença"));
   const ruleGolsVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do vencedor"));
   const ruleGolsPerdedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do perdedor"));
+  const ruleEmpateGarantido = match.scoring_rules.find(r => r.label.toLowerCase().includes("empate garantido"));
+
+  // 0. Empate Garantido (independente do resultado da partida)
+  if (bet.score_a === bet.score_b) {
+    totalPoints += ruleEmpateGarantido?.points || 0;
+  }
 
   // 1. Placar Exato
   if (bet.score_a === match.score_a && bet.score_b === match.score_b) {
@@ -126,11 +132,7 @@ export async function updateMatchBetsPoints(
     });
 
     // 5. Atualizar as apostas com os pontos calculados
-    console.log("💾 Atualizando pontos das apostas...", updates);
-    console.log(`📝 Total de apostas para atualizar: ${updates.length}`);
-    
     for (const update of updates) {
-      console.log(`🔄 Atualizando aposta ${update.id} com ${update.points} pontos...`);
       const { data, error: updateError } = await supabase
         .from("bets")
         .update({ points: update.points })
@@ -146,10 +148,7 @@ export async function updateMatchBetsPoints(
         });
         throw updateError;
       }
-      console.log(`✅ Aposta ${update.id} atualizada com sucesso:`, data);
     }
-    
-    console.log("✨ Todos os pontos foram atualizados com sucesso!");
   } catch (error) {
     console.error("Erro ao atualizar pontos das apostas:", error);
     throw error;

@@ -71,7 +71,6 @@ export const useBets = (matchId?: string) => {
         profiles: profilesMap.get(bet.user_id) || { first_name: null, last_name: null },
       }));
 
-      console.log(`Bets carregados para partida ${matchId}:`, enrichedBets);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return enrichedBets as any[];
     },
