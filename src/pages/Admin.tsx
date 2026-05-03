@@ -24,7 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDateBR } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { updateMatchBetsPoints } from "@/lib/calculatePoints";
-import { isMatchLive, isMatchFinishable } from "@/lib/matchTime";
+import { isMatchLive, isMatchFinishable, isMatchStarted } from "@/lib/matchTime";
 import { useEffect } from "react";
 
 const Admin = () => {
@@ -92,8 +92,25 @@ const Admin = () => {
   });
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estado para controlar os inputs de score
+  // Estado para o modal de multiplicador
+  const [multiplierDialog, setMultiplierDialog] = useState<{
+    isOpen: boolean;
+    matchId: string;
+    teamA: string;
+    teamB: string;
+    newMultiplier: string;
+  }>({
+    isOpen: false,
+    matchId: "",
+    teamA: "",
+    teamB: "",
+    newMultiplier: "",
+  });
+  const [isUpdatingMultiplier, setIsUpdatingMultiplier] = useState(false);
+
+  // Estado para controlar os inputs de score e multiplicador
   const [scoreInputs, setScoreInputs] = useState<Record<string, { a: string; b: string }>>({});
+  const [multiplierInputs, setMultiplierInputs] = useState<Record<string, string>>({});
 
   const handleAddMatch = async () => {
     if (!newMatch.teamA || !newMatch.teamB || !newMatch.date || !newMatch.time) return;
@@ -125,6 +142,58 @@ const Admin = () => {
       toast.success("Resultado salvo!");
       queryClient.invalidateQueries({ queryKey: ["matches"] });
     }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleOpenMultiplierDialog = (match: any) => {
+    const multStr = multiplierInputs[match.id];
+    if (multStr === undefined) return;
+
+    if (multStr.includes(",")) {
+      toast.error("Use ponto (.) em vez de vírgula (,) para decimais.");
+      return;
+    }
+
+    if (!/^\d+(\.\d+)?$/.test(multStr)) {
+      toast.error("Multiplicador inválido. Use apenas números e ponto (.)");
+      return;
+    }
+
+    const mult = parseFloat(multStr);
+    if (isNaN(mult) || mult < 1) {
+      toast.error("Multiplicador inválido (mínimo 1)");
+      return;
+    }
+
+    if (mult === match.multiplier) return;
+
+    setMultiplierDialog({
+      isOpen: true,
+      matchId: match.id,
+      teamA: match.team_a,
+      teamB: match.team_b,
+      newMultiplier: multStr,
+    });
+  };
+
+  const handleConfirmMultiplier = async () => {
+    if (!multiplierDialog.matchId) return;
+    setIsUpdatingMultiplier(true);
+    const mult = parseFloat(multiplierDialog.newMultiplier);
+
+    const { error } = await supabase
+      .from("matches")
+      .update({ multiplier: mult })
+      .eq("id", multiplierDialog.matchId);
+      
+    if (error) {
+      toast.error("Erro ao atualizar multiplicador");
+    } else {
+      toast.success(`Multiplicador da partida ${multiplierDialog.teamA} × ${multiplierDialog.teamB} atualizado para ×${mult}!`);
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      setMultiplierDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", newMultiplier: "" });
+    }
+    setIsUpdatingMultiplier(false);
   };
 
 
@@ -322,8 +391,35 @@ const Admin = () => {
                       <span className="text-sm font-medium">{match.team_b}</span>
                       {match.flag_b && <img src={match.flag_b} alt={match.team_b} className="h-6 w-8 rounded object-cover" />}
                     </div>
-                    {match.multiplier > 1 && (
-                      <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent">×{match.multiplier}</span>
+                    {!isMatchStarted(match) ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">×</span>
+                        <Input
+                          type="text"
+                          value={multiplierInputs[match.id] ?? match.multiplier ?? ""}
+                          onChange={(e) => setMultiplierInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
+                          className="w-16 h-8 text-xs bg-secondary border-border font-bold px-2 py-0 text-center"
+                          title="Alterar multiplicador"
+                          placeholder="Ex: 1.5"
+                        />
+                        {multiplierInputs[match.id] !== undefined && parseFloat(multiplierInputs[match.id]) !== match.multiplier && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenMultiplierDialog(match)}
+                            className="h-8 w-8 p-0 text-accent hover:bg-accent/10"
+                            title="Salvar multiplicador"
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      match.multiplier > 1 && (
+                        <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent" title="Partida iniciada, multiplicador fixo">
+                          ×{match.multiplier}
+                        </span>
+                      )
                     )}
                     <span className="text-xs text-muted-foreground">{formatDateBR(match.match_date)} {match.match_time?.slice(0, 5)}</span>
                     <div className="flex items-center gap-2">
@@ -538,6 +634,35 @@ const Admin = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isDeleting ? "Excluindo..." : "Sim, excluir partida"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modal de confirmação de multiplicador */}
+        <AlertDialog open={multiplierDialog.isOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) setMultiplierDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", newMultiplier: "" });
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Atualizar Multiplicador?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a alterar o multiplicador da partida{" "}
+                <span className="font-bold text-foreground">
+                  {multiplierDialog.teamA} × {multiplierDialog.teamB}
+                </span> para <span className="font-bold text-accent">×{multiplierDialog.newMultiplier}</span>.
+                <br />
+                Isso afetará os pontos de todos que apostarem nesta partida.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isUpdatingMultiplier}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmMultiplier}
+                disabled={isUpdatingMultiplier}
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                {isUpdatingMultiplier ? "Atualizando..." : "Confirmar alteração"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
