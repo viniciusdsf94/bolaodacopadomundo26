@@ -82,9 +82,12 @@ export const useMyBets = () => {
   return useQuery({
     queryKey: ["my_bets"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("bets")
-        .select("*");
+        .select("*")
+        .eq("user_id", user.id);
       if (error) throw error;
       return data;
     },

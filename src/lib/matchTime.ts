@@ -33,3 +33,13 @@ export const isMatchLive = (match: Pick<Match, "match_date" | "match_time" | "st
   if (match.status === "finished") return false;
   return match.status === "live" || isMatchStarted(match);
 };
+
+/**
+ * Returns true if at least 2 hours have passed since the match started.
+ * Used to allow the admin to register/edit the final score.
+ */
+export const isMatchFinishable = (match: Pick<Match, "match_date" | "match_time">) => {
+  const startTime = matchDateTimeBRT(match);
+  const twoHoursAfterStart = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+  return nowInBRT() >= twoHoursAfterStart;
+};

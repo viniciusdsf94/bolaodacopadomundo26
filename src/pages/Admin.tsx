@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Radio } from "lucide-react";
+import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDateBR } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { updateMatchBetsPoints } from "@/lib/calculatePoints";
-import { isMatchLive } from "@/lib/matchTime";
+import { isMatchLive, isMatchFinishable } from "@/lib/matchTime";
 import { useEffect } from "react";
 
 const Admin = () => {
@@ -77,7 +77,21 @@ const Admin = () => {
   });
 
   const [isConfirming, setIsConfirming] = useState(false);
-  
+
+  // Estado para o modal de exclusão
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    matchId: string;
+    teamA: string;
+    teamB: string;
+  }>({
+    isOpen: false,
+    matchId: "",
+    teamA: "",
+    teamB: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Estado para controlar os inputs de score
   const [scoreInputs, setScoreInputs] = useState<Record<string, { a: string; b: string }>>({});
 
@@ -113,21 +127,6 @@ const Admin = () => {
     }
   };
 
-  const handleGoLive = async (matchId: string) => {
-    try {
-      const { error } = await supabase
-        .from("matches")
-        .update({ status: "live" })
-        .eq("id", matchId);
-      
-      if (error) throw error;
-      
-      toast.success("Partida ao vivo! 🔴");
-      queryClient.invalidateQueries({ queryKey: ["matches"] });
-    } catch (error) {
-      toast.error("Erro ao colocar partida ao vivo");
-    }
-  };
 
   // Nova função para abrir o modal de confirmação
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -199,6 +198,38 @@ const Admin = () => {
       toast.error(errorMsg);
     } finally {
       setIsConfirming(false);
+    }
+  };
+
+  // Abre o modal de confirmação de exclusão
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDeleteMatch = (match: any) => {
+    setDeleteDialog({
+      isOpen: true,
+      matchId: match.id,
+      teamA: match.team_a,
+      teamB: match.team_b,
+    });
+  };
+
+  // Confirma e executa a exclusão
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.matchId) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .delete()
+        .eq("id", deleteDialog.matchId);
+      if (error) throw error;
+      toast.success(`Partida ${deleteDialog.teamA} × ${deleteDialog.teamB} excluída!`);
+      setDeleteDialog({ isOpen: false, matchId: "", teamA: "", teamB: "" });
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+    } catch (err) {
+      console.error("Erro ao excluir partida:", err);
+      toast.error("Erro ao excluir a partida");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -327,19 +358,8 @@ const Admin = () => {
                       />
                     </div>
                     <div className="flex gap-2">
-                      {!isMatchLive(match) && match.status !== "finished" && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleGoLive(match.id)}
-                          className="gap-1"
-                        >
-                          <Radio className="h-4 w-4" />
-                          Ao Vivo
-                        </Button>
-                      )}
                       
-                      {isMatchLive(match) && (
+                      {isMatchLive(match) && isMatchFinishable(match) && (
                         <Button
                           size="sm"
                           variant="default"
@@ -357,7 +377,7 @@ const Admin = () => {
                         </Button>
                       )}
 
-                      {match.status === "finished" && (
+                      {match.status === "finished" && isMatchFinishable(match) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -372,6 +392,18 @@ const Admin = () => {
                         >
                           <Save className="h-4 w-4" />
                           Editar
+                        </Button>
+                      )}
+
+                      {!isMatchLive(match) && match.status !== "finished" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteMatch(match)}
+                          className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          title="Excluir partida"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -476,6 +508,36 @@ const Admin = () => {
                 className="bg-accent"
               >
                 {isConfirming ? "Salvando..." : "Confirmar e Calcular Pontos"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modal de confirmação de exclusão */}
+        <AlertDialog open={deleteDialog.isOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) setDeleteDialog({ isOpen: false, matchId: "", teamA: "", teamB: "" });
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Partida?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a excluir a partida{" "}
+                <span className="font-bold text-foreground">
+                  {deleteDialog.teamA} × {deleteDialog.teamB}
+                </span>.
+                <br />
+                Esta ação é <span className="text-destructive font-bold">irreversível</span> e todos os
+                palpites associados a esta partida também serão excluídos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? "Excluindo..." : "Sim, excluir partida"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
