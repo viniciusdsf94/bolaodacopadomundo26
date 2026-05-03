@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Trash2 } from "lucide-react";
+import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Trash2, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -502,6 +503,17 @@ const Admin = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
+
+                      <Link to={`/admin/partida/${match.id}`}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-muted-foreground hover:bg-secondary"
+                          title="Ver usuários"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>

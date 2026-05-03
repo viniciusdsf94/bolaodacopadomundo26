@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatDateBR } from "@/lib/formatDate";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Check, Lock, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { isMatchStarted } from "@/lib/matchTime";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const Bets = () => {
   const { data: matches = [], isLoading } = useMatches();
   const { data: myBets = [], refetch: refetchBets } = useMyBets();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [bets, setBets] = useState<Record<string, { a: string; b: string }>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -183,9 +184,14 @@ const Bets = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`relative rounded-xl border p-4 text-center ${
+                    onClick={() => {
+                      if (isLocked) {
+                        navigate(`/partida/${match.id}`);
+                      }
+                    }}
+                    className={`relative rounded-xl border p-4 text-center transition-colors ${
                       isLocked
-                        ? "border-border bg-card opacity-70"
+                        ? "border-border bg-card opacity-70 cursor-pointer hover:border-border/80"
                         : "border-primary/20 bg-gradient-card shadow-glow"
                     }`}
                   >
@@ -228,6 +234,7 @@ const Bets = () => {
                               : bets[match.id]?.a ?? (existingBet ? String(existingBet.score_a) : "")
                           }
                           onChange={(e) => handleChange(match.id, "a", e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-12 h-12 text-center font-display text-xl font-black bg-secondary border-border rounded-xl"
                         />
 
@@ -244,6 +251,7 @@ const Bets = () => {
                               : bets[match.id]?.b ?? (existingBet ? String(existingBet.score_b) : "")
                           }
                           onChange={(e) => handleChange(match.id, "b", e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-12 h-12 text-center font-display text-xl font-black bg-secondary border-border rounded-xl"
                         />
                       </div>
@@ -257,18 +265,27 @@ const Bets = () => {
                     {/* Actions */}
                     <div className="flex items-center justify-center mt-5 gap-2">
                       {match.status === "finished" && (
-                        <Link to={`/partida/${match.id}`}>
-                          <Button variant="ghost" size="sm" className="text-xs text-primary h-8">
-                            Ver detalhes
-                          </Button>
-                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs text-primary h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/partida/${match.id}`);
+                          }}
+                        >
+                          Ver detalhes
+                        </Button>
                       )}
                       {!isLocked && (
                         <Button
                           size="sm"
                           className="gap-1 text-xs h-8"
                           disabled={saving === match.id}
-                          onClick={() => handleSave(match)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSave(match);
+                          }}
                         >
                           <Check className="h-3.5 w-3.5" /> {saving === match.id ? "Salvando..." : existingBet ? "Editar" : "Salvar"}
                         </Button>

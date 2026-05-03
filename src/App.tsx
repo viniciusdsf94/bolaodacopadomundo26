@@ -17,6 +17,7 @@ import Live from "./pages/Live";
 import Ranking from "./pages/Ranking";
 import MatchDetails from "./pages/MatchDetails";
 import Admin from "./pages/Admin";
+import AdminMatchUsers from "./pages/AdminMatchUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/ao-vivo" element={<UserRoute><Live /></UserRoute>} />
             <Route path="/partida/:id" element={<ProtectedRoute><MatchDetails /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+            <Route path="/admin/partida/:id" element={<AdminRoute><AdminMatchUsers /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
