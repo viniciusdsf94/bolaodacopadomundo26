@@ -37,7 +37,7 @@ export function calculateBetPoints(
   // Encontrar as regras de pontuação
   const ruleExato = match.scoring_rules.find(r => r.label.toLowerCase().includes("placar exato"));
   const ruleVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("vencedor"));
-  const ruleDiferenca = match.scoring_rules.find(r => r.label.toLowerCase().includes("diferença"));
+  const ruleDiferenca = match.scoring_rules.find(r => r.label.toLowerCase().includes("diferença") || r.label.toLowerCase().includes("saldo"));
   const ruleGolsVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do vencedor"));
   const ruleGolsPerdedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do perdedor"));
   const ruleEmpateGarantido = match.scoring_rules.find(r => r.label.toLowerCase().includes("empate garantido"));

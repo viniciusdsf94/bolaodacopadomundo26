@@ -143,6 +143,7 @@ export const useHistoricalRanking = () => {
         const dataPoint: ChartDataPoint = { date };
         rankingForDate.forEach((r, idx) => {
           dataPoint[r.userId] = idx + 1;
+          dataPoint[`${r.userId}_points`] = r.points;
         });
 
         chartData.push(dataPoint);

@@ -139,6 +139,10 @@ const Ranking = () => {
                     const [y, m, d] = label.split('-');
                     return `${d}/${m}/${y}`;
                   }}
+                  formatter={(value, name, props) => {
+                    const points = props.payload[`${props.dataKey}_points`];
+                    return [`${value}º lugar (${points} pts)`, name];
+                  }}
                 />
                 <Legend 
                   wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}

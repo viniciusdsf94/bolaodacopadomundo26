@@ -41,5 +41,6 @@ export const isMatchLive = (match: Pick<Match, "match_date" | "match_time" | "st
 export const isMatchFinishable = (match: Pick<Match, "match_date" | "match_time">) => {
   const startTime = matchDateTimeBRT(match);
   const twoHoursAfterStart = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+  // const twoHoursAfterStart = new Date(startTime.getTime() + 0);
   return nowInBRT() >= twoHoursAfterStart;
 };

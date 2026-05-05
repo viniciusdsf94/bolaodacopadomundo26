@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { Button } from "@/components/ui/button";
 import { useMatches, useMyBets } from "@/hooks/useMatches";
-import { useRanking } from "@/hooks/useRanking";
+import { useRanking, useHistoricalRanking } from "@/hooks/useRanking";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { formatDateBR } from "@/lib/formatDate";
@@ -37,9 +37,20 @@ const Dashboard = () => {
 
   const displayName = profile?.first_name ?? user?.email?.split("@")[0] ?? "Jogador";
 
+  const { data: historical = { chartData: [], users: [] } } = useHistoricalRanking();
+
   const myRank = ranking.find((r) => r.user_id === user?.id);
   const currentPosition = myRank?.position || 0;
-  const previousPosition = profile?.previous_position || currentPosition;
+  
+  let previousPosition = currentPosition;
+  if (historical.chartData.length >= 2 && user?.id) {
+    const prevDayData = historical.chartData[historical.chartData.length - 2];
+    const prevPos = prevDayData[user.id];
+    if (typeof prevPos === "number") {
+      previousPosition = prevPos;
+    }
+  }
+  
   const positionDiff = previousPosition - currentPosition;
 
   const statCards = [
