@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Home, ListChecks, History, LogOut, Shield } from "lucide-react";
+import { Home, ListChecks, History, LogOut, Shield, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
@@ -27,13 +28,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
+
       {/* Top bar */}
       <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <Link to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img
+              src="/pwa-192x192.png"
+              alt="Bolão Copa 26"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
             <span className="font-display text-lg font-bold text-foreground">
               Bolão <span className="text-gradient-gold">Copa 2026</span>
             </span>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trophy, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,9 +78,11 @@ const Register = () => {
         className="w-full max-w-md"
       >
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-glow">
-            <Trophy className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img
+            src="/pwa-192x192.png"
+            alt="Bolão Copa 26"
+            className="h-20 w-20 rounded-2xl shadow-glow object-cover"
+          />
           <h1 className="font-display text-3xl font-bold text-foreground">
             Criar Conta
           </h1>
