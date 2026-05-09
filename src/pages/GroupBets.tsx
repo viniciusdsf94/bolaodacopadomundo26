@@ -26,7 +26,7 @@ const GroupBets = () => {
 
   const finishedOrLive = matches
     .filter((m) => m.status !== "upcoming")
-    .sort((a, b) => a.match_date.localeCompare(b.match_date) || a.match_time.localeCompare(b.match_time));
+    .sort((a, b) => b.match_date.localeCompare(a.match_date) || b.match_time.localeCompare(a.match_time));
 
   if (isLoading) {
     return (
