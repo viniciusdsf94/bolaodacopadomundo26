@@ -24,11 +24,25 @@ export const useRanking = () => {
         throw new Error(betsError.message);
       }
 
+      // Fetch point adjustments
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: adjustmentsData, error: adjustmentsError } = await (supabase as any)
+        .from("point_adjustments")
+        .select("user_id, points");
+
+      if (adjustmentsError) {
+        throw new Error(adjustmentsError.message);
+      }
+
       // Agrupar por usuário e somar pontos
       const userPoints: Record<string, number> = {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (betsData || []).forEach((bet: any) => {
         userPoints[bet.user_id] = (userPoints[bet.user_id] || 0) + (bet.points || 0);
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (adjustmentsData || []).forEach((adj: any) => {
+        userPoints[adj.user_id] = (userPoints[adj.user_id] || 0) + (adj.points || 0);
       });
 
       // Buscar informações de TODOS os usuários (profiles)
@@ -101,6 +115,14 @@ export const useHistoricalRanking = () => {
 
       if (profilesError) throw new Error(profilesError.message);
 
+      // 4. Fetch point adjustments
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: adjustmentsData, error: adjustmentsError } = await (supabase as any)
+        .from("point_adjustments")
+        .select("user_id, points, created_at");
+
+      if (adjustmentsError) throw new Error(adjustmentsError.message);
+
       if (!matchesData || matchesData.length === 0) return { chartData: [], users: profilesData || [] };
 
       // Map match_id to match_date
@@ -110,8 +132,17 @@ export const useHistoricalRanking = () => {
         matchDates[m.id] = m.match_date;
       });
 
+      // Map adjustment dates
+      const adjDates: string[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (adjustmentsData || []).forEach((adj: any) => {
+        const d = new Date(adj.created_at).toISOString().split('T')[0];
+        adj.date = d;
+        adjDates.push(d);
+      });
+
       // Get unique sorted dates
-      const uniqueDates = Array.from(new Set(Object.values(matchDates))).sort();
+      const uniqueDates = Array.from(new Set([...Object.values(matchDates), ...adjDates])).sort();
 
       const chartData: ChartDataPoint[] = [];
 
@@ -130,6 +161,14 @@ export const useHistoricalRanking = () => {
         betsData.forEach(bet => {
           if (matchesOnDate.includes(bet.match_id) && bet.points) {
             cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
+          }
+        });
+
+        // Add points for adjustments on this date
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (adjustmentsData || []).forEach((adj: any) => {
+          if (adj.date === date) {
+            cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
           }
         });
 

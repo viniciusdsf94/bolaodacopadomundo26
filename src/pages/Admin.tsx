@@ -18,6 +18,7 @@ import {
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import TeamSelect from "@/components/TeamSelect";
+import AdminPointAdjustments from "@/components/AdminPointAdjustments";
 import { useMatches, useScoringRules } from "@/hooks/useMatches";
 import { useRanking } from "@/hooks/useRanking";
 import { supabase } from "@/integrations/supabase/client";
@@ -325,15 +326,21 @@ const Admin = () => {
             <TabsTrigger value="matches" className="gap-1">
               <CalendarDays className="h-4 w-4" /> Partidas
             </TabsTrigger>
+            <TabsTrigger value="create_match" className="gap-1">
+              <Plus className="h-4 w-4" /> Criar Partida
+            </TabsTrigger>
             <TabsTrigger value="rules" className="gap-1">
               <Settings className="h-4 w-4" /> Pontuação
             </TabsTrigger>
             <TabsTrigger value="ranking" className="gap-1">
               <Trophy className="h-4 w-4" /> Classificação
             </TabsTrigger>
+            <TabsTrigger value="users" className="gap-1">
+              <Users className="h-4 w-4" /> Usuários
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="matches" className="space-y-4 mt-4">
+          <TabsContent value="create_match" className="space-y-4 mt-4">
             <div className="rounded-xl border border-border bg-gradient-card p-4 space-y-4">
               <h3 className="font-display font-bold text-sm">Nova Partida</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -374,6 +381,9 @@ const Admin = () => {
                 <Plus className="h-4 w-4" /> Adicionar Partida
               </Button>
             </div>
+          </TabsContent>
+
+          <TabsContent value="matches" className="space-y-4 mt-4">
 
             <div className="space-y-2">
               {sortedMatches.map((match, i) => (
@@ -583,6 +593,10 @@ const Admin = () => {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-4">
+            <AdminPointAdjustments />
           </TabsContent>
         </Tabs>
 

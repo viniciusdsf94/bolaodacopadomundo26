@@ -82,11 +82,11 @@ const Bets = () => {
     }
     const bet = bets[match.id];
     const existingBet = myBets.find((b) => b.match_id === match.id);
-    
+
     // Use existing bet values if not being edited
     const scoreA = bet?.a || (existingBet ? String(existingBet.score_a) : "");
     const scoreB = bet?.b || (existingBet ? String(existingBet.score_b) : "");
-    
+
     if (!scoreA || !scoreB) {
       toast.error("Preencha o placar dos dois times");
       return;
@@ -189,22 +189,29 @@ const Bets = () => {
                         navigate(`/partida/${match.id}`);
                       }
                     }}
-                    className={`relative rounded-xl border p-4 text-center transition-colors ${
-                      isLocked
+                    className={`relative rounded-xl border p-4 text-center transition-colors ${isLocked
                         ? "border-border bg-card opacity-70 cursor-pointer hover:border-border/80"
                         : "border-primary/20 bg-gradient-card shadow-glow"
-                    }`}
+                      }`}
                   >
                     {/* Match header */}
-                    <div className="absolute top-3 left-4 text-left flex items-center gap-1">
+                    <div className="absolute top-3 left-4 right-14 text-left flex items-center gap-1 min-w-0">
                       {isLocked ? (
-                        <Lock className="h-3 w-3 text-destructive" />
+                        <Lock className="h-3 w-3 text-destructive shrink-0" />
                       ) : (
-                        <Clock className="h-3 w-3 text-accent" />
+                        <Clock className="h-3 w-3 text-accent shrink-0" />
                       )}
-                      <span className={`text-[10px] sm:text-xs font-medium ${isLocked ? "text-destructive" : "text-accent"}`}>
+                      <span className={`text-[10px] sm:text-xs font-medium shrink-0 ${isLocked ? "text-destructive" : "text-accent"}`}>
                         {match.match_time?.slice(0, 5)}
                       </span>
+                      {(match.stadium || match.city) && (
+                        <>
+                          <span className="text-muted-foreground/40 shrink-0">·</span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                            {[match.stadium, match.city, match.country].filter(Boolean).join(" · ")}
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {match.multiplier > 1 && (
@@ -216,7 +223,7 @@ const Bets = () => {
                     )}
 
                     {/* Score input */}
-                    <div className="flex items-center justify-center gap-4 mt-6">
+                    <div className="flex items-start justify-center gap-4 mt-8">
                       <div className="flex flex-col items-center gap-1.5 w-[80px]">
                         <Flag src={match.flag_a} alt={match.team_a} size="lg" />
                         <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_a}</span>
@@ -263,11 +270,11 @@ const Bets = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-center mt-5 gap-2">
+                    <div className="flex items-center justify-center mt-3 gap-2">
                       {match.status === "finished" && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-xs text-primary h-8"
                           onClick={(e) => {
                             e.stopPropagation();

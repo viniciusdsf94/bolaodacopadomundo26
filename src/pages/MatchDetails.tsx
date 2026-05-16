@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, Check, X } from "lucide-react";
+import { ArrowLeft, Target, Check, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -153,7 +153,7 @@ const MatchDetails = () => {
               <p className="text-xs font-bold text-accent">Multiplicador ×{match.multiplier}</p>
             </div>
           )}
-          <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-start justify-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1">
               <Flag src={match.flag_a} alt={match.team_a} size="lg" />
               <span className="text-sm font-medium">{match.team_a}</span>
@@ -170,6 +170,17 @@ const MatchDetails = () => {
               <span className="text-sm font-medium">{match.team_b}</span>
             </div>
           </div>
+
+          {(match.stadium || match.city) && (
+            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                {[match.stadium, match.city, match.country]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         <div>

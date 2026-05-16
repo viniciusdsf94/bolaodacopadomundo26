@@ -129,7 +129,7 @@ const GroupBets = () => {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-center gap-4 mt-6">
+                    <div className="flex items-start justify-center gap-4 mt-6">
                       <div className="flex flex-col items-center gap-1.5 w-[80px]">
                         <Flag src={match.flag_a} alt={match.team_a} size="lg" />
                         <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_a}</span>

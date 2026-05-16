@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Download, Share, Plus } from "lucide-react";
+import { X, Download, Share, Plus, MoreVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const DISMISSED_KEY = "pwa-install-banner-dismissed";
@@ -13,12 +13,16 @@ const isRunningAsPWA = () =>
 const isIOS = () =>
   /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
 
+// Detecta Android
+const isAndroid = () => /android/i.test(navigator.userAgent);
+
 // Detecta Android/Chrome com suporte ao beforeinstallprompt
 let deferredPrompt: any = null;
 
 const PWAInstallBanner = () => {
   const [show, setShow] = useState(false);
   const [isIOSDevice, setIsIOSDevice] = useState(false);
+  const [isAndroidDevice, setIsAndroidDevice] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
@@ -26,15 +30,16 @@ const PWAInstallBanner = () => {
     if (isRunningAsPWA() || sessionStorage.getItem(DISMISSED_KEY)) return;
 
     const ios = isIOS();
+    const android = isAndroid();
     setIsIOSDevice(ios);
+    setIsAndroidDevice(android);
 
-    if (ios) {
-      // iOS: mostra instruções manuais
+    if (ios || android) {
+      // Mostra o banner para dispositivos móveis
       setShow(true);
-      return;
     }
 
-    // Android/Chrome: escuta o evento de instalação
+    // Escuta o evento de instalação
     const handler = (e: Event) => {
       e.preventDefault();
       deferredPrompt = e;
@@ -94,7 +99,23 @@ const PWAInstallBanner = () => {
                     </span>{" "}
                     e depois{" "}
                     <span className="inline-flex items-center gap-0.5 bg-white/10 rounded px-1 py-0.5 font-medium">
-                      <Plus className="h-3 w-3" /> Adicionar à Tela de Início
+                      <Plus className="h-3 w-3" /> Tela de Início
+                    </span>
+                  </p>
+                </>
+              ) : isAndroidDevice && !canInstall ? (
+                <>
+                  <p className="text-sm font-semibold text-white leading-tight">
+                    Instale o Bolão Copa 26
+                  </p>
+                  <p className="text-xs text-green-200 leading-tight mt-0.5 flex items-center gap-1 flex-wrap">
+                    Toque em{" "}
+                    <span className="inline-flex items-center gap-0.5 bg-white/10 rounded px-1 py-0.5 font-medium">
+                      <MoreVertical className="h-3 w-3" /> Menu
+                    </span>{" "}
+                    e depois{" "}
+                    <span className="inline-flex items-center gap-0.5 bg-white/10 rounded px-1 py-0.5 font-medium">
+                      Adicionar à tela inicial
                     </span>
                   </p>
                 </>
@@ -110,8 +131,8 @@ const PWAInstallBanner = () => {
               )}
             </div>
 
-            {/* Botão de instalar (apenas Android/Chrome) */}
-            {!isIOSDevice && canInstall && (
+            {/* Botão de instalar (apenas quando canInstall é true) */}
+            {canInstall && (
               <button
                 onClick={handleInstall}
                 className="flex-shrink-0 flex items-center gap-1.5 bg-green-500 hover:bg-green-400 active:scale-95 transition-all text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow"
@@ -137,3 +158,4 @@ const PWAInstallBanner = () => {
 };
 
 export default PWAInstallBanner;
+

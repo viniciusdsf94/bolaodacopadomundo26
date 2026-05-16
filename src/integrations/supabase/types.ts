@@ -57,6 +57,8 @@ export type Database = {
       }
       matches: {
         Row: {
+          city: string
+          country: string
           created_at: string
           flag_a: string
           flag_b: string
@@ -66,12 +68,15 @@ export type Database = {
           multiplier: number
           score_a: number | null
           score_b: number | null
+          stadium: string
           status: string
           team_a: string
           team_b: string
           updated_at: string
         }
         Insert: {
+          city?: string
+          country?: string
           created_at?: string
           flag_a?: string
           flag_b?: string
@@ -81,12 +86,15 @@ export type Database = {
           multiplier?: number
           score_a?: number | null
           score_b?: number | null
+          stadium?: string
           status?: string
           team_a: string
           team_b: string
           updated_at?: string
         }
         Update: {
+          city?: string
+          country?: string
           created_at?: string
           flag_a?: string
           flag_b?: string
@@ -96,6 +104,7 @@ export type Database = {
           multiplier?: number
           score_a?: number | null
           score_b?: number | null
+          stadium?: string
           status?: string
           team_a?: string
           team_b?: string
