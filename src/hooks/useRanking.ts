@@ -8,6 +8,8 @@ export interface RankingUser {
   last_name: string;
   total_points: number;
   position: number;
+  trend: 'up' | 'down' | 'none';
+  position_change: number;
 }
 
 export const useRanking = () => {
@@ -28,7 +30,7 @@ export const useRanking = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: adjustmentsData, error: adjustmentsError } = await (supabase as any)
         .from("point_adjustments")
-        .select("user_id, points");
+        .select("id, user_id, points, created_at");
 
       if (adjustmentsError) {
         throw new Error(adjustmentsError.message);
@@ -56,6 +58,95 @@ export const useRanking = () => {
         throw new Error(usersError.message);
       }
 
+      // Fetch all matches to find live and latest finished
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: matchesData, error: matchesError } = await (supabase as any)
+        .from("matches")
+        .select("id, status, match_date, match_time");
+      if (matchesError) throw new Error(matchesError.message);
+
+      const hasLiveMatches = matchesData.some((m: any) => m.status === "live");
+
+      let latestFinishedMatches: string[] = [];
+      let latestAdjustments: string[] = [];
+      let hasRecentUpdates = false;
+
+      if (!hasLiveMatches) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const finished = matchesData.filter((m: any) => m.status === "finished");
+        
+        let latestTime = 0;
+        
+        if (finished.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          finished.sort((a: any, b: any) => {
+            const dateA = new Date(`${a.match_date}T${a.match_time}`).getTime();
+            const dateB = new Date(`${b.match_date}T${b.match_time}`).getTime();
+            return dateB - dateA;
+          });
+          latestTime = new Date(`${finished[0].match_date}T${finished[0].match_time}`).getTime();
+        }
+
+        const adjs = [...(adjustmentsData || [])];
+        if (adjs.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          adjs.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const latestAdjTime = new Date(adjs[0].created_at).getTime();
+          if (latestAdjTime > latestTime) {
+            latestTime = latestAdjTime;
+          }
+        }
+
+        if (latestTime > 0) {
+          // Agrupar todas as atualizações que aconteceram dentro de uma janela de 5 minutos desse último evento
+          const windowMs = 300000; // 5 minutos
+          
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          latestFinishedMatches = finished.filter((m: any) => {
+            return (latestTime - new Date(`${m.match_date}T${m.match_time}`).getTime()) < windowMs;
+          }).map((m: any) => m.id);
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          latestAdjustments = adjs.filter((a: any) => {
+            return (latestTime - new Date(a.created_at).getTime()) < windowMs;
+          }).map((a: any) => a.id);
+          
+          hasRecentUpdates = latestFinishedMatches.length > 0 || latestAdjustments.length > 0;
+        }
+      }
+
+      // Calculate previous points by subtracting points from latest events
+      const userPrevPoints: Record<string, number> = { ...userPoints };
+      if (!hasLiveMatches && hasRecentUpdates) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (betsData || []).forEach((bet: any) => {
+          if (latestFinishedMatches.includes(bet.match_id)) {
+            userPrevPoints[bet.user_id] -= (bet.points || 0);
+          }
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (adjustmentsData || []).forEach((adj: any) => {
+          if (latestAdjustments.includes(adj.id)) {
+            userPrevPoints[adj.user_id] -= (adj.points || 0);
+          }
+        });
+      }
+
+      // Calculate previous ranking positions
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prevRankingList = (usersData || []).map((user: any) => ({
+        user_id: user.id,
+        prev_points: userPrevPoints[user.id] || 0
+      })).sort((a, b) => {
+        if (b.prev_points !== a.prev_points) return b.prev_points - a.prev_points;
+        return a.user_id.localeCompare(b.user_id); // Tie-breaker estável
+      });
+
+      const prevPositions: Record<string, number> = {};
+      prevRankingList.forEach((u, index) => {
+        prevPositions[u.user_id] = index + 1;
+      });
+
       // Montar ranking com TODOS os usuários
       const rankingData: RankingUser[] = (usersData || [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,12 +157,32 @@ export const useRanking = () => {
           last_name: user.last_name || "",
           total_points: userPoints[user.id] || 0,
           position: 0, // Será atualizado depois
+          trend: 'none' as 'up' | 'down' | 'none',
+          position_change: 0
         }))
-        .sort((a, b) => b.total_points - a.total_points)
-        .map((user, index) => ({
-          ...user,
-          position: index + 1,
-        }));
+        .sort((a, b) => {
+          if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+          return a.user_id.localeCompare(b.user_id); // Mesmo tie-breaker
+        })
+        .map((user, index) => {
+          const currentPos = index + 1;
+          const prevPos = prevPositions[user.user_id];
+          let trend: 'up' | 'down' | 'none' = 'none';
+          let change = 0;
+
+          if (!hasLiveMatches && hasRecentUpdates) {
+            change = prevPos - currentPos;
+            if (currentPos < prevPos) trend = 'up';
+            else if (currentPos > prevPos) trend = 'down';
+          }
+
+          return {
+            ...user,
+            position: currentPos,
+            trend,
+            position_change: Math.abs(change)
+          };
+        });
 
       return rankingData;
     },

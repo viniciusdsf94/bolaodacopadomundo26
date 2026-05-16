@@ -1,4 +1,5 @@
-import { Trophy } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Trophy, ChevronUp, ChevronDown, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Layout from "@/components/Layout";
@@ -13,6 +14,9 @@ const COLORS = [
 const Ranking = () => {
   const { data: ranking = [], isLoading } = useRanking();
   const { data: historical = { chartData: [], users: [] }, isLoading: isHistoricalLoading } = useHistoricalRanking();
+
+  const displayChartData = historical.chartData;
+  const displayUsers = historical.users;
 
   const getMedalIcon = (position: number) => {
     if (position === 1) return "🥇";
@@ -30,9 +34,6 @@ const Ranking = () => {
       </Layout>
     );
   }
-
-  const displayChartData = historical.chartData;
-  const displayUsers = historical.users;
 
   return (
     <Layout>
@@ -56,18 +57,29 @@ const Ranking = () => {
             ranking.map((user, index) => {
               const medal = getMedalIcon(user.position);
               const isTopThree = user.position <= 3;
+              
+              const isMovingUp = user.trend === 'up';
+              const isMovingDown = user.trend === 'down';
+              
+              const containerClasses = isMovingUp
+                ? "border-green-500/50 bg-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.3)] z-10 scale-[1.02] transition-colors duration-500"
+                : isMovingDown
+                  ? "border-red-500/50 bg-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-0 scale-[0.98] transition-colors duration-500"
+                  : isTopThree
+                    ? "border-zinc-700 bg-gradient-to-r from-zinc-800/40 to-transparent shadow-sm transition-colors duration-500"
+                    : "border-border bg-gradient-to-r from-zinc-800/40 to-transparent hover:from-secondary/20 hover:to-transparent transition-colors duration-500";
 
               return (
                 <motion.div
+                  layout
                   key={user.user_id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`rounded-lg border p-4 flex items-center justify-between ${
-                    isTopThree
-                      ? "border-primary/30 bg-gradient-to-r from-primary/10 to-transparent shadow-glow"
-                      : "border-border bg-card hover:bg-secondary/30 transition-colors"
-                  }`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    layout: { type: "spring", stiffness: 100, damping: 20 },
+                    opacity: { delay: index * 0.05 }
+                  }}
+                  className={`rounded-lg border p-4 flex items-center justify-between relative ${containerClasses}`}
                 >
                   <div className="flex items-center gap-4 flex-1">
                     <div className="flex items-center justify-center w-10">
@@ -84,9 +96,22 @@ const Ranking = () => {
                       <p className="font-display font-bold text-foreground">
                         {user.first_name} {user.last_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Posição #{user.position}
-                      </p>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <span>Posição #{user.position}</span>
+                        {user.trend === 'up' && (
+                          <span className="flex items-center text-green-500 ml-1 font-bold" title={`Subiu ${user.position_change} posições`}>
+                            <ChevronUp className="h-4 w-4 mr-0.5" />
+                            {user.position_change}
+                          </span>
+                        )}
+                        {user.trend === 'down' && (
+                          <span className="flex items-center text-red-500 ml-1 font-bold" title={`Caiu ${user.position_change} posições`}>
+                            <ChevronDown className="h-4 w-4 mr-0.5" />
+                            {user.position_change}
+                          </span>
+                        )}
+                        {user.trend === 'none' && <Minus className="h-3 w-3 text-muted-foreground/40 ml-1" title="Manteve a posição" />}
+                      </div>
                     </div>
                   </div>
 
