@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Trophy, ChevronUp, ChevronDown, Minus } from "lucide-react";
+import { Trophy, ChevronUp, ChevronDown, Minus, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Layout from "@/components/Layout";
-import { useRanking, useHistoricalRanking } from "@/hooks/useRanking";
+import PointAdjustmentsHistory from "@/components/PointAdjustmentsHistory";
+import { useRanking, useHistoricalRanking, useCuriosities } from "@/hooks/useRanking";
 
 const COLORS = [
   '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
@@ -14,6 +15,7 @@ const COLORS = [
 const Ranking = () => {
   const { data: ranking = [], isLoading } = useRanking();
   const { data: historical = { chartData: [], users: [] }, isLoading: isHistoricalLoading } = useHistoricalRanking();
+  const { data: curiosities = [], isLoading: isCuriositiesLoading } = useCuriosities();
 
   const displayChartData = historical.chartData;
   const displayUsers = historical.users;
@@ -25,7 +27,7 @@ const Ranking = () => {
     return null;
   };
 
-  if (isLoading || isHistoricalLoading) {
+  if (isLoading || isHistoricalLoading || isCuriositiesLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center py-12">
@@ -47,6 +49,47 @@ const Ranking = () => {
             Confira os pontos de todos os participantes
           </p>
         </div>
+
+        {/* Curiosidades Section */}
+        {curiosities && curiosities.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
+            <div className="col-span-full flex items-center justify-between">
+              <h3 className="font-display font-bold text-sm tracking-wide uppercase text-muted-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-yellow-500 animate-pulse" />
+                Curiosidades do Bolão
+              </h3>
+            </div>
+            {curiosities.map((item, idx) => (
+              <motion.div
+                key={item.type}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-zinc-800/30 hover:bg-zinc-800/50 border border-zinc-800 hover:border-zinc-700/80 p-4 rounded-lg flex gap-3 transition-all duration-300"
+              >
+                <div className="text-3xl flex items-center justify-center bg-zinc-900/60 rounded-lg p-2 h-12 w-12 border border-zinc-800 shrink-0">
+                  {item.icon}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                      {item.title}
+                    </span>
+                    <span className="text-xs font-bold text-white">
+                      {item.userName}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
+                  <div className="text-xs font-bold text-gradient-gold pt-1">
+                    {item.value}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-2">
           {ranking.length === 0 ? (
@@ -189,40 +232,9 @@ const Ranking = () => {
         </div>
         )}
 
-        {ranking.length > 0 && (
-          <div className="rounded-lg border border-border bg-card p-4">
-            <h3 className="font-display font-bold mb-3 flex items-center gap-2">
-              🏆 Resumo
-            </h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-gradient-gold">🥇</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {ranking[0]?.first_name} {ranking[0]?.last_name}
-                </p>
-                <p className="font-display font-bold">{ranking[0]?.total_points} pts</p>
-              </div>
-              {ranking[1] && (
-                <div>
-                  <p className="text-2xl font-bold">🥈</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {ranking[1]?.first_name} {ranking[1]?.last_name}
-                  </p>
-                  <p className="font-display font-bold">{ranking[1]?.total_points} pts</p>
-                </div>
-              )}
-              {ranking[2] && (
-                <div>
-                  <p className="text-2xl font-bold">🥉</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {ranking[2]?.first_name} {ranking[2]?.last_name}
-                  </p>
-                  <p className="font-display font-bold">{ranking[2]?.total_points} pts</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+
+
+        <PointAdjustmentsHistory />
       </div>
     </Layout>
   );

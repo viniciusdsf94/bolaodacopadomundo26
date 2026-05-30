@@ -307,3 +307,312 @@ export const useHistoricalRanking = () => {
     staleTime: 30000,
   });
 };
+
+export interface CuriosityItem {
+  type: "montanha_russa" | "nostradamus" | "zicado" | "rei_do_muro" | "pe_quente" | "pe_frio";
+  title: string;
+  description: string;
+  userName: string;
+  value: string | number;
+  icon: string;
+}
+
+export const useCuriosities = () => {
+  return useQuery({
+    queryKey: ["curiosities"],
+    queryFn: async () => {
+      // 1. Fetch finished matches (sorted chronologically)
+      const { data: matches, error: matchesError } = await supabase
+        .from("matches")
+        .select("id, match_date, match_time, score_a, score_b, status")
+        .eq("status", "finished");
+      if (matchesError) throw matchesError;
+
+      // 2. Fetch all bets
+      const { data: bets, error: betsError } = await supabase
+        .from("bets")
+        .select("match_id, user_id, score_a, score_b, points");
+      if (betsError) throw betsError;
+
+      // 3. Fetch profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name");
+      if (profilesError) throw profilesError;
+
+      // 4. Fetch point adjustments to calculate history
+      const { data: adjustments, error: adjustmentsError } = await supabase
+        .from("point_adjustments")
+        .select("user_id, points, created_at");
+      if (adjustmentsError) throw adjustmentsError;
+
+      const userList = profiles || [];
+      const matchDates: Record<string, string> = {};
+      (matches || []).forEach((m) => {
+        matchDates[m.id] = m.match_date;
+      });
+
+      const adjDates: string[] = [];
+      (adjustments || []).forEach((adj: any) => {
+        const d = new Date(adj.created_at).toISOString().split('T')[0];
+        adj.date = d;
+        adjDates.push(d);
+      });
+
+      const uniqueDates = Array.from(new Set([...Object.values(matchDates), ...adjDates])).sort();
+      const cumulativePoints: Record<string, number> = {};
+      userList.forEach(u => cumulativePoints[u.id] = 0);
+
+      const positionsHistory: Record<string, number[]> = {};
+      userList.forEach(u => positionsHistory[u.id] = []);
+
+      uniqueDates.forEach((date) => {
+        const matchesOnDate = (matches || []).filter(m => m.match_date === date).map(m => m.id);
+        (bets || []).forEach(bet => {
+          if (matchesOnDate.includes(bet.match_id) && bet.points) {
+            cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
+          }
+        });
+        (adjustments || []).forEach((adj: any) => {
+          if (adj.date === date) {
+            cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
+          }
+        });
+
+        const rankingForDate = userList.map(u => ({
+          userId: u.id,
+          points: cumulativePoints[u.id] || 0
+        })).sort((a, b) => b.points - a.points);
+
+        rankingForDate.forEach((r, idx) => {
+          positionsHistory[r.userId].push(idx + 1);
+        });
+      });
+
+      // Find the biggest jump
+      let biggestJumpUser: any = null;
+      let maxJump = 0;
+      let jumpDate = "";
+
+      userList.forEach(u => {
+        const history = positionsHistory[u.id];
+        for (let i = 1; i < history.length; i++) {
+          const jump = history[i - 1] - history[i]; // e.g. 5 to 2 = 3
+          if (jump > maxJump) {
+            maxJump = jump;
+            biggestJumpUser = u;
+            jumpDate = uniqueDates[i];
+          }
+        }
+      });
+
+      // Nostradamus: Longest streak of exact scores
+      const sortedMatches = [...(matches || [])].sort((a, b) => {
+        const dateA = new Date(`${a.match_date}T${a.match_time}`).getTime();
+        const dateB = new Date(`${b.match_date}T${b.match_time}`).getTime();
+        return dateA - dateB;
+      });
+
+      let nostradamusUser: any = null;
+      let maxExactStreak = 0;
+
+      userList.forEach(u => {
+        let currentStreak = 0;
+        let bestStreak = 0;
+
+        sortedMatches.forEach(m => {
+          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          if (bet) {
+            const isExact = bet.score_a === m.score_a && bet.score_b === m.score_b;
+            if (isExact) {
+              currentStreak++;
+              if (currentStreak > bestStreak) {
+                bestStreak = currentStreak;
+              }
+            } else {
+              currentStreak = 0;
+            }
+          } else {
+            currentStreak = 0;
+          }
+        });
+
+        if (bestStreak > maxExactStreak) {
+          maxExactStreak = bestStreak;
+          nostradamusUser = u;
+        }
+      });
+
+      // Zicado: Longest streak of 0 points
+      let zicadoUser: any = null;
+      let maxZeroStreak = 0;
+
+      userList.forEach(u => {
+        let currentStreak = 0;
+        let bestStreak = 0;
+
+        sortedMatches.forEach(m => {
+          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          if (bet && bet.points === 0) {
+            currentStreak++;
+            if (currentStreak > bestStreak) {
+              bestStreak = currentStreak;
+            }
+          } else if (bet && (bet.points || 0) > 0) {
+            currentStreak = 0;
+          }
+        });
+
+        if (bestStreak > maxZeroStreak) {
+          maxZeroStreak = bestStreak;
+          zicadoUser = u;
+        }
+      });
+
+      // Rei do Muro: Most correct ties
+      let reiDoMuroUser: any = null;
+      let maxCorrectTies = 0;
+
+      userList.forEach(u => {
+        let correctTies = 0;
+
+        sortedMatches.forEach(m => {
+          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          if (bet && bet.score_a === bet.score_b && m.score_a === m.score_b) {
+            correctTies++;
+          }
+        });
+
+        if (correctTies > maxCorrectTies) {
+          maxCorrectTies = correctTies;
+          reiDoMuroUser = u;
+        }
+      });
+
+      // Pé Quente & Pé Frio (Winner streaks)
+      let peQuenteUser: any = null;
+      let maxWinnerStreak = 0;
+
+      let peFrioUser: any = null;
+      let maxLoserStreak = 0;
+
+      userList.forEach(u => {
+        let currentWinnerStreak = 0;
+        let bestWinnerStreak = 0;
+
+        let currentLoserStreak = 0;
+        let bestLoserStreak = 0;
+
+        sortedMatches.forEach(m => {
+          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          if (bet) {
+            const betWinner = bet.score_a > bet.score_b ? "a" : bet.score_b > bet.score_a ? "b" : "draw";
+            const matchWinner = m.score_a > m.score_b ? "a" : m.score_b > m.score_a ? "b" : "draw";
+            const correctWinner = betWinner === matchWinner;
+
+            if (correctWinner) {
+              currentWinnerStreak++;
+              if (currentWinnerStreak > bestWinnerStreak) {
+                bestWinnerStreak = currentWinnerStreak;
+              }
+              currentLoserStreak = 0;
+            } else {
+              currentLoserStreak++;
+              if (currentLoserStreak > bestLoserStreak) {
+                bestLoserStreak = currentLoserStreak;
+              }
+              currentWinnerStreak = 0;
+            }
+          } else {
+            currentWinnerStreak = 0;
+            currentLoserStreak = 0;
+          }
+        });
+
+        if (bestWinnerStreak > maxWinnerStreak) {
+          maxWinnerStreak = bestWinnerStreak;
+          peQuenteUser = u;
+        }
+
+        if (bestLoserStreak > maxLoserStreak) {
+          maxLoserStreak = bestLoserStreak;
+          peFrioUser = u;
+        }
+      });
+
+      const curiosities: CuriosityItem[] = [];
+
+      if (biggestJumpUser && maxJump > 0) {
+        const [y, m, d] = jumpDate.split('-');
+        const formattedDate = `${d}/${m}`;
+        curiosities.push({
+          type: "montanha_russa",
+          title: "🎢 Montanha-Russa",
+          description: `Subiu ${maxJump} ${maxJump === 1 ? 'posição' : 'posições'} no ranking geral no dia ${formattedDate}!`,
+          userName: `${biggestJumpUser.first_name} ${biggestJumpUser.last_name || ''}`.trim(),
+          value: `+${maxJump} ${maxJump === 1 ? 'posição' : 'posições'}`,
+          icon: "🎢"
+        });
+      }
+
+      if (peQuenteUser && maxWinnerStreak >= 3) {
+        curiosities.push({
+          type: "pe_quente",
+          title: "🔥 Pé Quente",
+          description: `Acertou o vencedor de pelo menos ${maxWinnerStreak} jogos seguidos. Está com a visão em dia!`,
+          userName: `${peQuenteUser.first_name} ${peQuenteUser.last_name || ''}`.trim(),
+          value: `${maxWinnerStreak} acertos seguidos`,
+          icon: "🔥"
+        });
+      }
+
+      if (peFrioUser && maxLoserStreak >= 3) {
+        curiosities.push({
+          type: "pe_frio",
+          title: "🤡 Pé Frio",
+          description: `Errou o vencedor de ${maxLoserStreak} jogos seguidos. Mais perdido que o VAR!`,
+          userName: `${peFrioUser.first_name} ${peFrioUser.last_name || ''}`.trim(),
+          value: `${maxLoserStreak} erros seguidos`,
+          icon: "🤡"
+        });
+      }
+
+      if (nostradamusUser && maxExactStreak > 0) {
+        curiosities.push({
+          type: "nostradamus",
+          title: "🔮 Nostradamus",
+          description: `Acertou o placar exato de ${maxExactStreak} ${maxExactStreak === 1 ? 'jogo' : 'jogos'} seguidos!`,
+          userName: `${nostradamusUser.first_name} ${nostradamusUser.last_name || ''}`.trim(),
+          value: `${maxExactStreak} seguidos`,
+          icon: "🔮"
+        });
+      }
+
+      if (zicadoUser && maxZeroStreak > 0) {
+        curiosities.push({
+          type: "zicado",
+          title: "🧊 Zicado",
+          description: `Ficou ${maxZeroStreak} ${maxZeroStreak === 1 ? 'jogo' : 'jogos'} seguidos sem pontuar nada. Que azar!`,
+          userName: `${zicadoUser.first_name} ${zicadoUser.last_name || ''}`.trim(),
+          value: `${maxZeroStreak} jogos zerados`,
+          icon: "🧊"
+        });
+      }
+
+      if (reiDoMuroUser && maxCorrectTies > 0) {
+        curiosities.push({
+          type: "rei_do_muro",
+          title: "🤝 Rei do Muro",
+          description: `Acertou a ocorrência de empate em ${maxCorrectTies} ${maxCorrectTies === 1 ? 'jogo' : 'jogos'}.`,
+          userName: `${reiDoMuroUser.first_name} ${reiDoMuroUser.last_name || ''}`.trim(),
+          value: `${maxCorrectTies} empates`,
+          icon: "🤝"
+        });
+      }
+
+      return curiosities;
+    },
+    staleTime: 30000,
+  });
+};
+

@@ -153,21 +153,21 @@ const MatchDetails = () => {
               <p className="text-xs font-bold text-accent">Multiplicador ×{match.multiplier}</p>
             </div>
           )}
-          <div className="flex items-start justify-center gap-6 mt-4">
-            <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex flex-col items-center gap-1 w-28">
               <Flag src={match.flag_a} alt={match.team_a} size="lg" />
-              <span className="text-sm font-medium">{match.team_a}</span>
+              <span className="text-sm font-medium text-center leading-tight">{match.team_a}</span>
             </div>
-            <div className="font-display text-4xl font-black text-foreground">
+            <div className="font-display text-4xl font-black text-foreground shrink-0">
               {match.status === "finished" ? (
                 <>{match.score_a} <span className="text-muted-foreground">×</span> {match.score_b}</>
               ) : (
                 <span className="text-muted-foreground">×</span>
               )}
             </div>
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1 w-28">
               <Flag src={match.flag_b} alt={match.team_b} size="lg" />
-              <span className="text-sm font-medium">{match.team_b}</span>
+              <span className="text-sm font-medium text-center leading-tight">{match.team_b}</span>
             </div>
           </div>
 

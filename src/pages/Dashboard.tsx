@@ -33,13 +33,17 @@ const Dashboard = () => {
   const remainingBets = todayUpcoming.filter((m) => !todayBetMatchIds.has(m.id)).length;
   const liveCount = matches.filter((m) => isMatchLive(m)).length;
 
-  const totalPoints = myBets.reduce((sum, b) => sum + (b.points ?? 0), 0);
+  const myRank = ranking.find((r) => r.user_id === user?.id);
+  const totalPoints = myRank?.total_points || 0;
+
+  const todayPoints = myBets
+    .filter((b) => matches.some((m) => m.id === b.match_id && m.match_date === todayStr))
+    .reduce((sum, b) => sum + (b.points ?? 0), 0);
 
   const displayName = profile?.first_name ?? user?.email?.split("@")[0] ?? "Jogador";
 
   const { data: historical = { chartData: [], users: [] } } = useHistoricalRanking();
 
-  const myRank = ranking.find((r) => r.user_id === user?.id);
   const currentPosition = myRank?.position || 0;
   
   let previousPosition = currentPosition;
@@ -55,7 +59,14 @@ const Dashboard = () => {
 
   const statCards = [
     { label: "Palpites restantes hoje", value: String(remainingBets), icon: Target, link: "/palpites" },
-    { label: "Seus Pontos", value: String(totalPoints), icon: TrendingUp, link: undefined },
+    { 
+      label: "Seus Pontos", 
+      value: String(totalPoints), 
+      icon: TrendingUp, 
+      link: undefined,
+      isPoints: true,
+      todayPoints: todayPoints
+    },
     { label: "Jogos ao Vivo", value: String(liveCount), icon: Flame, link: "/ao-vivo" },
     { 
       label: "Sua Posição", 
@@ -92,6 +103,12 @@ const Dashboard = () => {
                     <div className={`flex items-center text-xs font-bold ${positionDiff > 0 ? 'text-green-500' : positionDiff < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
                       {positionDiff > 0 ? <ArrowUp className="h-3 w-3 mr-0.5" /> : positionDiff < 0 ? <ArrowDown className="h-3 w-3 mr-0.5" /> : <Minus className="h-3 w-3 mr-0.5" />}
                       {Math.abs(positionDiff)}
+                    </div>
+                  )}
+                  {stat.isPoints && stat.todayPoints > 0 && (
+                    <div className="flex items-center text-xs font-bold text-green-500">
+                      <ArrowUp className="h-3 w-3 mr-0.5" />
+                      {stat.todayPoints}
                     </div>
                   )}
                 </div>
