@@ -322,7 +322,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="matches">
-          <TabsList className="bg-secondary">
+          <TabsList className="w-full flex flex-wrap h-auto bg-secondary p-1 gap-1.5 justify-start md:justify-center">
             <TabsTrigger value="matches" className="gap-1">
               <CalendarDays className="h-4 w-4" /> Partidas
             </TabsTrigger>
@@ -394,136 +394,154 @@ const Admin = () => {
                   transition={{ delay: i * 0.03 }}
                   className="rounded-xl border border-border bg-card p-4"
                 >
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-[150px]">
-                      {match.flag_a && <img src={match.flag_a} alt={match.team_a} className="h-6 w-8 rounded object-cover" />}
-                      <span className="text-sm font-medium">{match.team_a}</span>
-                      <span className="text-muted-foreground text-xs">vs</span>
-                      <span className="text-sm font-medium">{match.team_b}</span>
-                      {match.flag_b && <img src={match.flag_b} alt={match.team_b} className="h-6 w-8 rounded object-cover" />}
+                  <div className="flex flex-col gap-3">
+                    {/* Row 1: Countries & Date/Time */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {match.flag_a && <img src={match.flag_a} alt={match.team_a} className="h-6 w-8 rounded object-cover shadow-sm" />}
+                        <span className="text-sm font-semibold">{match.team_a}</span>
+                        <span className="text-muted-foreground text-xs">vs</span>
+                        <span className="text-sm font-semibold">{match.team_b}</span>
+                        {match.flag_b && <img src={match.flag_b} alt={match.team_b} className="h-6 w-8 rounded object-cover shadow-sm" />}
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium bg-secondary/50 px-2 py-1 rounded">
+                        {formatDateBR(match.match_date)} {match.match_time?.slice(0, 5)}
+                      </span>
                     </div>
-                    {!isMatchStarted(match) ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">×</span>
-                        <Input
-                          type="text"
-                          value={multiplierInputs[match.id] ?? match.multiplier ?? ""}
-                          onChange={(e) => setMultiplierInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
-                          className="w-16 h-8 text-xs bg-secondary border-border font-bold px-2 py-0 text-center"
-                          title="Alterar multiplicador"
-                          placeholder="Ex: 1.5"
-                        />
-                        {multiplierInputs[match.id] !== undefined && parseFloat(multiplierInputs[match.id]) !== match.multiplier && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleOpenMultiplierDialog(match)}
-                            className="h-8 w-8 p-0 text-accent hover:bg-accent/10"
-                            title="Salvar multiplicador"
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
+
+                    {/* Row 2: Multiplier & Scores & Actions (Multiplier in its own line/block) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
+                      {/* Multiplier */}
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground font-medium">Multiplicador:</span>
+                        {!isMatchStarted(match) ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">×</span>
+                            <Input
+                              type="text"
+                              value={multiplierInputs[match.id] ?? match.multiplier ?? ""}
+                              onChange={(e) => setMultiplierInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
+                              className="w-16 h-8 text-xs bg-secondary border-border font-bold px-2 py-0 text-center"
+                              title="Alterar multiplicador"
+                              placeholder="Ex: 1.5"
+                            />
+                            {multiplierInputs[match.id] !== undefined && parseFloat(multiplierInputs[match.id]) !== match.multiplier && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleOpenMultiplierDialog(match)}
+                                className="h-8 w-8 p-0 text-accent hover:bg-accent/10"
+                                title="Salvar multiplicador"
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          match.multiplier > 1 ? (
+                            <span className="rounded bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent" title="Partida iniciada, multiplicador fixo">
+                              ×{match.multiplier}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground font-medium">×1.0</span>
+                          )
                         )}
                       </div>
-                    ) : (
-                      match.multiplier > 1 && (
-                        <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent" title="Partida iniciada, multiplicador fixo">
-                          ×{match.multiplier}
-                        </span>
-                      )
-                    )}
-                    <span className="text-xs text-muted-foreground">{formatDateBR(match.match_date)} {match.match_time?.slice(0, 5)}</span>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number" min={0} placeholder="0"
-                        value={scoreInputs[match.id]?.a ?? match.score_a ?? ""}
-                        onChange={(e) => {
-                          setScoreInputs((prev) => ({
-                            ...prev,
-                            [match.id]: {
-                              a: e.target.value,
-                              b: prev[match.id]?.b ?? (match.score_b?.toString() || ""),
-                            },
-                          }));
-                        }}
-                        className="w-14 text-center bg-secondary border-border font-bold"
-                      />
-                      <span className="text-muted-foreground">×</span>
-                      <Input
-                        type="number" min={0} placeholder="0"
-                        value={scoreInputs[match.id]?.b ?? match.score_b ?? ""}
-                        onChange={(e) => {
-                          setScoreInputs((prev) => ({
-                            ...prev,
-                            [match.id]: {
-                              a: prev[match.id]?.a ?? (match.score_a?.toString() || ""),
-                              b: e.target.value,
-                            },
-                          }));
-                        }}
-                        className="w-14 text-center bg-secondary border-border font-bold"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      
-                      {isMatchLive(match) && isMatchFinishable(match) && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() =>
-                            handleFinishMatch(
-                              match,
-                              scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
-                              scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
-                            )
-                          }
-                          className="gap-1"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Finalizar
-                        </Button>
-                      )}
 
-                      {match.status === "finished" && isMatchFinishable(match) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleFinishMatch(
-                              match,
-                              scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
-                              scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
-                            )
-                          }
-                          className="gap-1 border-accent text-accent hover:bg-accent/10"
-                        >
-                          <Save className="h-4 w-4" />
-                          Editar
-                        </Button>
-                      )}
+                      {/* Scores & Actions */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number" min={0} placeholder="0"
+                            value={scoreInputs[match.id]?.a ?? match.score_a ?? ""}
+                            onChange={(e) => {
+                              setScoreInputs((prev) => ({
+                                ...prev,
+                                [match.id]: {
+                                  a: e.target.value,
+                                  b: prev[match.id]?.b ?? (match.score_b?.toString() || ""),
+                                },
+                              }));
+                            }}
+                            className="w-12 h-8 text-center bg-secondary border-border font-bold text-xs"
+                          />
+                          <span className="text-muted-foreground text-xs">×</span>
+                          <Input
+                            type="number" min={0} placeholder="0"
+                            value={scoreInputs[match.id]?.b ?? match.score_b ?? ""}
+                            onChange={(e) => {
+                              setScoreInputs((prev) => ({
+                                ...prev,
+                                [match.id]: {
+                                  a: prev[match.id]?.a ?? (match.score_a?.toString() || ""),
+                                  b: e.target.value,
+                                },
+                              }));
+                            }}
+                            className="w-12 h-8 text-center bg-secondary border-border font-bold text-xs"
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          {isMatchLive(match) && isMatchFinishable(match) && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() =>
+                                handleFinishMatch(
+                                  match,
+                                  scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
+                                  scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
+                                )
+                              }
+                              className="h-8 gap-1 text-xs px-2.5"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Finalizar
+                            </Button>
+                          )}
 
-                      {!isMatchLive(match) && match.status !== "finished" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteMatch(match)}
-                          className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          title="Excluir partida"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                          {match.status === "finished" && isMatchFinishable(match) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleFinishMatch(
+                                  match,
+                                  scoreInputs[match.id]?.a ?? match.score_a?.toString() ?? "0",
+                                  scoreInputs[match.id]?.b ?? match.score_b?.toString() ?? "0"
+                                )
+                              }
+                              className="h-8 gap-1 border-accent text-accent hover:bg-accent/10 text-xs px-2.5"
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                              Editar
+                            </Button>
+                          )}
 
-                      <Link to={`/admin/partida/${match.id}`}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="gap-1 text-muted-foreground hover:bg-secondary"
-                          title="Ver usuários"
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                          {!isMatchLive(match) && match.status !== "finished" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteMatch(match)}
+                              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              title="Excluir partida"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+
+                          <Link to={`/admin/partida/${match.id}`}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:bg-secondary"
+                              title="Ver usuários"
+                            >
+                              <Users className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
