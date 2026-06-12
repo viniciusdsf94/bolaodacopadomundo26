@@ -44,26 +44,36 @@ const Live = () => {
                 transition={{ delay: i * 0.05 }}
               >
                 <Link to={`/partida/${match.id}`}>
-                  <div className="rounded-xl border border-primary/30 bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <div className="rounded-xl border border-primary/30 bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="text-xs text-muted-foreground leading-tight whitespace-nowrap">
-                          <p>{formatDateBR(match.match_date)}</p>
-                          <p>{match.match_time?.slice(0, 5)}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <Flag src={match.flag_a} alt={match.team_a} />
-                            <span className="text-sm font-medium">{match.team_a}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">vs</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{match.team_b}</span>
-                            <Flag src={match.flag_b} alt={match.team_b} />
-                          </div>
+                      {/* Time A */}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Flag src={match.flag_a} alt={match.team_a} />
+                        <span className="text-xs sm:text-sm font-medium truncate">{match.team_a}</span>
+                      </div>
+                      
+                      {/* Centro (Horário / Placar) */}
+                      <div className="flex flex-col items-center px-2 sm:px-4 shrink-0">
+                        <span className="text-[10px] text-muted-foreground leading-none mb-1">
+                          {formatDateBR(match.match_date)} • {match.match_time?.slice(0, 5)}
+                        </span>
+                        <div className="font-display text-lg sm:text-xl font-black text-foreground">
+                          {match.score_a ?? 0} <span className="text-muted-foreground font-medium text-sm sm:text-base">×</span> {match.score_b ?? 0}
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-primary animate-pulse-glow">AO VIVO</span>
+                      
+                      {/* Time B */}
+                      <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                        <span className="text-xs sm:text-sm font-medium truncate text-right">{match.team_b}</span>
+                        <Flag src={match.flag_b} alt={match.team_b} />
+                      </div>
+                    </div>
+
+                    {/* Texto "AO VIVO" abaixo no centro */}
+                    <div className="flex justify-center">
+                      <span className="text-[10px] font-bold tracking-wider text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 animate-pulse-glow">
+                        AO VIVO
+                      </span>
                     </div>
                   </div>
                 </Link>

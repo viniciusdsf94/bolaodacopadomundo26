@@ -577,7 +577,7 @@ export const useCuriosities = () => {
         });
       }
 
-      if (nostradamusUser && maxExactStreak > 0) {
+      if (nostradamusUser && maxExactStreak >= 3) {
         curiosities.push({
           type: "nostradamus",
           title: "🔮 Nostradamus",
@@ -588,7 +588,7 @@ export const useCuriosities = () => {
         });
       }
 
-      if (zicadoUser && maxZeroStreak > 0) {
+      if (zicadoUser && maxZeroStreak >= 3) {
         curiosities.push({
           type: "zicado",
           title: "🧊 Zicado",
@@ -599,7 +599,7 @@ export const useCuriosities = () => {
         });
       }
 
-      if (reiDoMuroUser && maxCorrectTies > 0) {
+      if (reiDoMuroUser && maxCorrectTies >= 3) {
         curiosities.push({
           type: "rei_do_muro",
           title: "🤝 Rei do Muro",

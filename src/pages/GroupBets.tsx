@@ -115,19 +115,11 @@ const GroupBets = () => {
                 transition={{ delay: i * 0.05 }}
               >
                 <Link to={`/partida/${match.id}`}>
-                  <div className="relative rounded-xl border border-border bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer text-center">
+                  <div className="relative rounded-xl border border-border bg-card p-4 hover:bg-secondary/50 transition-colors cursor-pointer text-center flex flex-col gap-3">
                     <div className="absolute top-3 left-4 text-left">
                       <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">{formatDateBR(match.match_date)}</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">{match.match_time?.slice(0, 5)}</p>
                     </div>
-
-                    {match.status === "live" && (
-                      <div className="absolute top-3 right-4">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary animate-pulse-glow">
-                          AO VIVO
-                        </span>
-                      </div>
-                    )}
 
                     <div className="flex items-start justify-center gap-4 mt-6">
                       <div className="flex flex-col items-center gap-1.5 w-[80px]">
@@ -148,6 +140,14 @@ const GroupBets = () => {
                         <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_b}</span>
                       </div>
                     </div>
+
+                    {match.status === "live" && (
+                      <div className="flex justify-center mt-1">
+                        <span className="text-[10px] font-bold tracking-wider text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 animate-pulse-glow">
+                          AO VIVO
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Link>
               </motion.div>
