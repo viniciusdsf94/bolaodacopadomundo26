@@ -195,7 +195,7 @@ const Ranking = () => {
             </h3>
             <div className="w-full h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={displayChartData} margin={{ top: 10, right: 10, left: -30, bottom: 0 }}>
+                <LineChart data={displayChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                   <XAxis 
                     dataKey="date" 
@@ -216,7 +216,7 @@ const Ranking = () => {
                     axisLine={false} 
                     tickCount={displayUsers.length || 1}
                     domain={[1, displayUsers.length || 1]}
-                    width={20}
+                    width={30}
                   />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', borderRadius: '0.5rem' }}
