@@ -89,8 +89,8 @@ const Ranking = () => {
                   {item.icon}
                 </div>
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20 w-fit">
                       {item.title}
                     </span>
                     <span className="text-xs font-bold text-white">
