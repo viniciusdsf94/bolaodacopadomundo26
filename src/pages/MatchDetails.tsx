@@ -20,10 +20,12 @@ import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches, useScoringRules, useBets } from "@/hooks/useMatches";
+import { useRanking } from "@/hooks/useRanking";
 import { formatDateBR } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { updateMatchBetsPoints, calculateBetPoints } from "@/lib/calculatePoints";
 import { getBetPointsBreakdown } from "@/lib/getBetPointsBreakdown";
+import { sortMatchBets } from "@/lib/matchBetsSort";
 
 const MatchDetails = () => {
   const { id } = useParams();
@@ -49,6 +51,14 @@ const MatchDetails = () => {
       </Layout>
     );
   }
+
+  const { data: ranking = [] } = useRanking();
+
+  const userPositions = new Map<string, number>(
+    ranking.map((user) => [user.user_id, user.position])
+  );
+
+  const sortedMatchBets = sortMatchBets(matchBets, userPositions, match.status === "finished");
 
   const handleConfirmResult = async () => {
     if (!id || !scoreA || !scoreB) {
@@ -232,12 +242,12 @@ const MatchDetails = () => {
             </div>
           )}
           <div className="space-y-2">
-            {matchBets.length === 0 ? (
+            {sortedMatchBets.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-4">
                 Nenhum palpite registrado para esta partida.
               </p>
             ) : (
-                matchBets.map((bet, i) => {
+                sortedMatchBets.map((bet, i) => {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const profile = (bet as any).profiles;
                   const displayName = profile?.first_name 
@@ -261,7 +271,14 @@ const MatchDetails = () => {
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary font-display font-bold text-sm">
                       {initials}
                     </div>
-                    <span className="flex-1 text-sm font-medium">{displayName}</span>
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <span className="text-sm font-medium truncate">{displayName}</span>
+                      {userPositions.has(bet.user_id) && (
+                        <span className="text-xs text-muted-foreground">
+                          #{userPositions.get(bet.user_id)} no ranking geral
+                        </span>
+                      )}
+                    </div>
                     <span className="font-display font-bold text-foreground">
                       {bet.score_a} × {bet.score_b}
                     </span>

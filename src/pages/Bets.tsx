@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { formatDateBR } from "@/lib/formatDate";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, Lock, Clock, ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,10 +21,33 @@ const Bets = () => {
   const [bets, setBets] = useState<Record<string, { a: string; b: string }>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
-  const sortedDates = useMemo(() => {
-    const dates = [...new Set(matches.map((m) => m.match_date))];
-    return dates.sort((a, b) => a.localeCompare(b));
+  const activeDayRef = useRef<HTMLButtonElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const getAdjustedDate = (match: Match) => {
+    if (match.match_time?.startsWith("01:00")) {
+      const [y, m, d] = match.match_date.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      date.setDate(date.getDate() - 1);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    return match.match_date;
+  };
+
+  const adjustedMatches = useMemo(() => {
+    return matches.map((m) => ({
+      ...m,
+      displayDate: getAdjustedDate(m),
+    }));
   }, [matches]);
+
+  const sortedDates = useMemo(() => {
+    const dates = [...new Set(adjustedMatches.map((m) => m.displayDate))];
+    return dates.sort((a, b) => a.localeCompare(b));
+  }, [adjustedMatches]);
 
   const todayStr = useMemo(() => {
     const now = new Date();
@@ -43,10 +66,42 @@ const Bets = () => {
 
   const currentDate = sortedDates[dateIndex] ?? sortedDates[0];
 
-  const matchesForDay = useMemo(
-    () => matches.filter((m) => m.match_date === currentDate),
-    [matches, currentDate]
-  );
+  useEffect(() => {
+    if (activeDayRef.current) {
+      activeDayRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [dateIndex]);
+
+  const getDayBetStatus = (dateStr: string) => {
+    const dayMatches = adjustedMatches.filter((m) => m.displayDate === dateStr);
+    if (dayMatches.length === 0) return "none";
+    
+    const upcomingMatches = dayMatches.filter(m => !isMatchStarted(m));
+    if (upcomingMatches.length === 0) return "locked";
+
+    const hasBetsForAllUpcoming = upcomingMatches.every(m => 
+      myBets.some(b => b.match_id === m.id)
+    );
+
+    return hasBetsForAllUpcoming ? "complete" : "pending";
+  };
+
+  const matchesForDay = useMemo(() => {
+    const dayMatches = adjustedMatches.filter((m) => m.displayDate === currentDate);
+    return dayMatches.sort((a, b) => {
+      const isA01 = a.match_time?.startsWith("01:00");
+      const isB01 = b.match_time?.startsWith("01:00");
+
+      if (isA01 && !isB01) return 1;
+      if (!isA01 && isB01) return -1;
+
+      return (a.match_time || "").localeCompare(b.match_time || "");
+    });
+  }, [adjustedMatches, currentDate]);
 
   const getDateLabel = (dateStr: string) => {
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -137,28 +192,80 @@ const Bets = () => {
         </div>
 
         {/* Date navigator */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center gap-2 w-full max-w-5xl mx-auto">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             disabled={dateIndex <= 0}
             onClick={() => setDateIndex((i) => Math.max(0, i - 1))}
-            className="text-primary"
+            className="h-14 w-11 shrink-0 border-border bg-card/50 hover:bg-secondary text-foreground transition-all duration-200 shadow-sm"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </Button>
-          <span className="font-display font-bold text-base min-w-[80px] text-center">
-            {dateLabel}
-          </span>
+
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-2 px-1 scroll-smooth"
+          >
+            {sortedDates.map((dateStr, idx) => {
+              const [y, m, d] = dateStr.split("-").map(Number);
+              const date = new Date(y, m - 1, d);
+              const weekday = date.toLocaleDateString("pt-BR", { weekday: "short" }).toUpperCase().replace(".", "").slice(0, 3);
+              const dayNum = date.getDate();
+              const monthName = date.toLocaleDateString("pt-BR", { month: "short" }).toLowerCase().replace(".", "").slice(0, 3);
+              
+              const isActive = dateStr === currentDate;
+              const status = getDayBetStatus(dateStr);
+              
+              return (
+                <button
+                  key={dateStr}
+                  ref={isActive ? activeDayRef : null}
+                  onClick={() => setDateIndex(idx)}
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl min-w-[70px] h-[80px] border transition-all duration-300 select-none outline-none ${
+                    isActive
+                      ? "border-primary bg-gradient-to-b from-primary/20 to-primary/5 text-foreground font-semibold shadow-[0_0_15px_rgba(34,197,94,0.25)] scale-105 z-10"
+                      : "border-border bg-card/30 hover:bg-card/75 text-muted-foreground hover:text-foreground hover:border-zinc-700"
+                  }`}
+                >
+                  {/* Status Indicator Dot */}
+                  {status === "complete" && (
+                    <span 
+                      className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(34,197,94,0.7)]" 
+                      title="Palpites concluídos para este dia" 
+                    />
+                  )}
+                  {status === "pending" && (
+                    <span 
+                      className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_rgba(245,158,11,0.7)] animate-pulse" 
+                      title="Há palpites pendentes neste dia" 
+                    />
+                  )}
+                  
+                  <span className="text-[10px] uppercase font-black tracking-wider opacity-60 leading-none">{weekday}</span>
+                  <span className="text-xl font-extrabold leading-none my-1 font-display">{dayNum}</span>
+                  <span className="text-[10px] font-medium opacity-70 leading-none">{monthName}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             disabled={dateIndex >= sortedDates.length - 1}
             onClick={() => setDateIndex((i) => Math.min(sortedDates.length - 1, i + 1))}
-            className="text-primary"
+            className="h-14 w-11 shrink-0 border-border bg-card/50 hover:bg-secondary text-foreground transition-all duration-200 shadow-sm"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-6 w-6" />
           </Button>
+        </div>
+
+        {/* Date Label */}
+        <div className="text-center bg-zinc-900/30 py-2.5 rounded-xl border border-zinc-800/40 max-w-sm mx-auto shadow-sm">
+          <p className="font-display font-black text-sm tracking-widest text-primary uppercase">
+            {dateLabel}
+          </p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -203,6 +310,7 @@ const Bets = () => {
                       )}
                       <span className={`text-[10px] sm:text-xs font-medium shrink-0 ${isLocked ? "text-destructive" : "text-accent"}`}>
                         {match.match_time?.slice(0, 5)}
+                        {match.match_date !== match.displayDate && " (Dia seguinte)"}
                       </span>
                       {(match.stadium || match.city) && (
                         <>
