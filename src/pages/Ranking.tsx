@@ -189,13 +189,13 @@ const Ranking = () => {
         </div>
 
         {displayChartData.length > 1 && (
-          <div className="rounded-lg border border-border bg-card p-4 overflow-hidden mt-6">
-            <h3 className="font-display font-bold mb-4 flex items-center gap-2">
+          <div className="rounded-lg border border-border bg-card p-2 sm:p-4 overflow-hidden mt-6">
+            <h3 className="font-display font-bold mb-4 flex items-center gap-2 px-2 sm:px-0">
               📈 Histórico de Posições
             </h3>
             <div className="w-full h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={displayChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={displayChartData} margin={{ top: 10, right: 10, left: -30, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                   <XAxis 
                     dataKey="date" 
@@ -216,6 +216,7 @@ const Ranking = () => {
                     axisLine={false} 
                     tickCount={displayUsers.length || 1}
                     domain={[1, displayUsers.length || 1]}
+                    width={20}
                   />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', borderRadius: '0.5rem' }}
