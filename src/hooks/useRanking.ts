@@ -20,7 +20,7 @@ export const useRanking = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: betsData, error: betsError } = await (supabase as any)
         .from("bets")
-        .select("user_id, points");
+        .select("user_id, points, match_id");
 
       if (betsError) {
         throw new Error(betsError.message);
@@ -65,69 +65,40 @@ export const useRanking = () => {
         .select("id, status, match_date, match_time");
       if (matchesError) throw new Error(matchesError.message);
 
-      const hasLiveMatches = matchesData.some((m: any) => m.status === "live");
+      // Encontrar a última data em que houve alguma partida finalizada ou ajuste de pontos
+      const finished = matchesData.filter((m: any) => m.status === "finished");
+      let latestDateOverall = "";
 
-      let latestFinishedMatches: string[] = [];
-      let latestAdjustments: string[] = [];
-      let hasRecentUpdates = false;
+      if (finished.length > 0) {
+        const dates = finished.map((m: any) => m.match_date);
+        latestDateOverall = dates.reduce((max, d) => d > max ? d : max, dates[0]);
+      }
 
-      if (!hasLiveMatches) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const finished = matchesData.filter((m: any) => m.status === "finished");
-        
-        let latestTime = 0;
-        
-        if (finished.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          finished.sort((a: any, b: any) => {
-            const dateA = new Date(`${a.match_date}T${a.match_time}`).getTime();
-            const dateB = new Date(`${b.match_date}T${b.match_time}`).getTime();
-            return dateB - dateA;
-          });
-          latestTime = new Date(`${finished[0].match_date}T${finished[0].match_time}`).getTime();
-        }
-
-        const adjs = [...(adjustmentsData || [])];
-        if (adjs.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          adjs.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-          const latestAdjTime = new Date(adjs[0].created_at).getTime();
-          if (latestAdjTime > latestTime) {
-            latestTime = latestAdjTime;
-          }
-        }
-
-        if (latestTime > 0) {
-          // Agrupar todas as atualizações que aconteceram dentro de uma janela de 5 minutos desse último evento
-          const windowMs = 300000; // 5 minutos
-          
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          latestFinishedMatches = finished.filter((m: any) => {
-            return (latestTime - new Date(`${m.match_date}T${m.match_time}`).getTime()) < windowMs;
-          }).map((m: any) => m.id);
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          latestAdjustments = adjs.filter((a: any) => {
-            return (latestTime - new Date(a.created_at).getTime()) < windowMs;
-          }).map((a: any) => a.id);
-          
-          hasRecentUpdates = latestFinishedMatches.length > 0 || latestAdjustments.length > 0;
+      if (adjustmentsData && adjustmentsData.length > 0) {
+        const adjDates = adjustmentsData.map((a: any) => new Date(a.created_at).toISOString().split('T')[0]);
+        const maxAdjDate = adjDates.reduce((max, d) => d > max ? d : max, adjDates[0]);
+        if (!latestDateOverall || maxAdjDate > latestDateOverall) {
+          latestDateOverall = maxAdjDate;
         }
       }
 
-      // Calculate previous points by subtracting points from latest events
+      // Calcular pontos anteriores desconsiderando os eventos da última data (para ver a tendência em relação ao dia anterior)
       const userPrevPoints: Record<string, number> = { ...userPoints };
-      if (!hasLiveMatches && hasRecentUpdates) {
+      
+      if (latestDateOverall) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (betsData || []).forEach((bet: any) => {
-          if (latestFinishedMatches.includes(bet.match_id)) {
-            userPrevPoints[bet.user_id] -= (bet.points || 0);
+          const match = matchesData.find((m: any) => m.id === bet.match_id);
+          if (match && match.status === "finished" && match.match_date === latestDateOverall) {
+            userPrevPoints[bet.user_id] = (userPrevPoints[bet.user_id] || 0) - (bet.points || 0);
           }
         });
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (adjustmentsData || []).forEach((adj: any) => {
-          if (latestAdjustments.includes(adj.id)) {
-            userPrevPoints[adj.user_id] -= (adj.points || 0);
+          const adjDate = new Date(adj.created_at).toISOString().split('T')[0];
+          if (adjDate === latestDateOverall) {
+            userPrevPoints[adj.user_id] = (userPrevPoints[adj.user_id] || 0) - (adj.points || 0);
           }
         });
       }
@@ -170,10 +141,10 @@ export const useRanking = () => {
           let trend: 'up' | 'down' | 'none' = 'none';
           let change = 0;
 
-          if (!hasLiveMatches && hasRecentUpdates) {
+          if (prevPos) {
             change = prevPos - currentPos;
-            if (currentPos < prevPos) trend = 'up';
-            else if (currentPos > prevPos) trend = 'down';
+            if (change > 0) trend = 'up';
+            else if (change < 0) trend = 'down';
           }
 
           return {
@@ -389,24 +360,29 @@ export const useCuriosities = () => {
         });
       });
 
-      // Find the biggest jump
+      // Find the biggest jump on the LATEST day
       let biggestJumpUser: any = null;
       let maxJump = 0;
       let jumpDate = "";
 
-      userList.forEach(u => {
-        const history = positionsHistory[u.id];
-        for (let i = 1; i < history.length; i++) {
-          const jump = history[i - 1] - history[i]; // e.g. 5 to 2 = 3
-          if (jump > maxJump) {
-            maxJump = jump;
-            biggestJumpUser = u;
-            jumpDate = uniqueDates[i];
-          }
-        }
-      });
+      if (uniqueDates.length >= 2) {
+        const latestIdx = uniqueDates.length - 1;
+        const prevIdx = latestIdx - 1;
 
-      // Nostradamus: Longest streak of exact scores
+        userList.forEach(u => {
+          const history = positionsHistory[u.id];
+          if (history && history[prevIdx] !== undefined && history[latestIdx] !== undefined) {
+            const jump = history[prevIdx] - history[latestIdx];
+            if (jump > maxJump) {
+              maxJump = jump;
+              biggestJumpUser = u;
+              jumpDate = uniqueDates[latestIdx];
+            }
+          }
+        });
+      }
+
+      // Nostradamus: Current active streak of exact scores
       const sortedMatches = [...(matches || [])].sort((a, b) => {
         const dateA = new Date(`${a.match_date}T${a.match_time}`).getTime();
         const dateB = new Date(`${b.match_date}T${b.match_time}`).getTime();
@@ -418,7 +394,6 @@ export const useCuriosities = () => {
 
       userList.forEach(u => {
         let currentStreak = 0;
-        let bestStreak = 0;
 
         sortedMatches.forEach(m => {
           const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
@@ -426,9 +401,6 @@ export const useCuriosities = () => {
             const isExact = bet.score_a === m.score_a && bet.score_b === m.score_b;
             if (isExact) {
               currentStreak++;
-              if (currentStreak > bestStreak) {
-                bestStreak = currentStreak;
-              }
             } else {
               currentStreak = 0;
             }
@@ -437,39 +409,37 @@ export const useCuriosities = () => {
           }
         });
 
-        if (bestStreak > maxExactStreak) {
-          maxExactStreak = bestStreak;
+        if (currentStreak > maxExactStreak) {
+          maxExactStreak = currentStreak;
           nostradamusUser = u;
         }
       });
 
-      // Zicado: Longest streak of 0 points
+      // Zicado: Current active streak of 0 points
       let zicadoUser: any = null;
       let maxZeroStreak = 0;
 
       userList.forEach(u => {
         let currentStreak = 0;
-        let bestStreak = 0;
 
         sortedMatches.forEach(m => {
           const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
           if (bet && bet.points === 0) {
             currentStreak++;
-            if (currentStreak > bestStreak) {
-              bestStreak = currentStreak;
-            }
           } else if (bet && (bet.points || 0) > 0) {
+            currentStreak = 0;
+          } else {
             currentStreak = 0;
           }
         });
 
-        if (bestStreak > maxZeroStreak) {
-          maxZeroStreak = bestStreak;
+        if (currentStreak > maxZeroStreak) {
+          maxZeroStreak = currentStreak;
           zicadoUser = u;
         }
       });
 
-      // Rei do Muro: Most correct ties
+      // Rei do Muro: Most correct ties (cumulative)
       let reiDoMuroUser: any = null;
       let maxCorrectTies = 0;
 
@@ -498,10 +468,7 @@ export const useCuriosities = () => {
 
       userList.forEach(u => {
         let currentWinnerStreak = 0;
-        let bestWinnerStreak = 0;
-
         let currentLoserStreak = 0;
-        let bestLoserStreak = 0;
 
         sortedMatches.forEach(m => {
           const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
@@ -512,15 +479,9 @@ export const useCuriosities = () => {
 
             if (correctWinner) {
               currentWinnerStreak++;
-              if (currentWinnerStreak > bestWinnerStreak) {
-                bestWinnerStreak = currentWinnerStreak;
-              }
               currentLoserStreak = 0;
             } else {
               currentLoserStreak++;
-              if (currentLoserStreak > bestLoserStreak) {
-                bestLoserStreak = currentLoserStreak;
-              }
               currentWinnerStreak = 0;
             }
           } else {
@@ -529,20 +490,20 @@ export const useCuriosities = () => {
           }
         });
 
-        if (bestWinnerStreak > maxWinnerStreak) {
-          maxWinnerStreak = bestWinnerStreak;
+        if (currentWinnerStreak > maxWinnerStreak) {
+          maxWinnerStreak = currentWinnerStreak;
           peQuenteUser = u;
         }
 
-        if (bestLoserStreak > maxLoserStreak) {
-          maxLoserStreak = bestLoserStreak;
+        if (currentLoserStreak > maxLoserStreak) {
+          maxLoserStreak = currentLoserStreak;
           peFrioUser = u;
         }
       });
 
       const curiosities: CuriosityItem[] = [];
 
-      if (biggestJumpUser && maxJump > 0) {
+      if (biggestJumpUser && maxJump > 4) {
         const [y, m, d] = jumpDate.split('-');
         const formattedDate = `${d}/${m}`;
         curiosities.push({
