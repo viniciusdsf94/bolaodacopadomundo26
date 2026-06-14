@@ -75,7 +75,7 @@ export const useRanking = () => {
       }
 
       if (adjustmentsData && adjustmentsData.length > 0) {
-        const adjDates = adjustmentsData.map((a: any) => new Date(a.created_at).toISOString().split('T')[0]);
+        const adjDates = adjustmentsData.map((a: any) => new Date(a.created_at.replace(" ", "T")).toISOString().split('T')[0]);
         const maxAdjDate = adjDates.reduce((max, d) => d > max ? d : max, adjDates[0]);
         if (!latestDateOverall || maxAdjDate > latestDateOverall) {
           latestDateOverall = maxAdjDate;
@@ -96,7 +96,7 @@ export const useRanking = () => {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (adjustmentsData || []).forEach((adj: any) => {
-          const adjDate = new Date(adj.created_at).toISOString().split('T')[0];
+          const adjDate = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
           if (adjDate === latestDateOverall) {
             userPrevPoints[adj.user_id] = (userPrevPoints[adj.user_id] || 0) - (adj.points || 0);
           }
@@ -218,7 +218,7 @@ export const useHistoricalRanking = () => {
       const adjDates: string[] = [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (adjustmentsData || []).forEach((adj: any) => {
-        const d = new Date(adj.created_at).toISOString().split('T')[0];
+        const d = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
         adj.date = d;
         adjDates.push(d);
       });
@@ -325,7 +325,7 @@ export const useCuriosities = () => {
 
       const adjDates: string[] = [];
       (adjustments || []).forEach((adj: any) => {
-        const d = new Date(adj.created_at).toISOString().split('T')[0];
+        const d = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
         adj.date = d;
         adjDates.push(d);
       });
@@ -384,9 +384,9 @@ export const useCuriosities = () => {
 
       // Nostradamus: Current active streak of exact scores
       const sortedMatches = [...(matches || [])].sort((a, b) => {
-        const dateA = new Date(`${a.match_date}T${a.match_time}`).getTime();
-        const dateB = new Date(`${b.match_date}T${b.match_time}`).getTime();
-        return dateA - dateB;
+        const dateTimeA = `${a.match_date}T${a.match_time || "00:00:00"}`;
+        const dateTimeB = `${b.match_date}T${b.match_time || "00:00:00"}`;
+        return dateTimeA.localeCompare(dateTimeB);
       });
 
       let nostradamusUser: any = null;

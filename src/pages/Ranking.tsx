@@ -123,9 +123,9 @@ const Ranking = () => {
               const isMovingDown = user.trend === 'down';
               
               const containerClasses = isMovingUp
-                ? "border-green-500/20 bg-green-500/[0.05] z-10 scale-[1.01] transition-colors duration-500"
+                ? "border-green-500/20 bg-green-500/10 z-10 scale-[1.01] transition-colors duration-500"
                 : isMovingDown
-                  ? "border-red-500/20 bg-red-500/[0.05] z-0 scale-[0.99] transition-colors duration-500"
+                  ? "border-red-500/20 bg-red-500/10 z-0 scale-[0.99] transition-colors duration-500"
                   : isTopThree
                     ? "border-zinc-700 bg-gradient-to-r from-zinc-800/40 to-transparent shadow-sm transition-colors duration-500"
                     : "border-border bg-gradient-to-r from-zinc-800/40 to-transparent hover:from-secondary/20 hover:to-transparent transition-colors duration-500";
