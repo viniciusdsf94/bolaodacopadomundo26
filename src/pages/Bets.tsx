@@ -25,7 +25,7 @@ const Bets = () => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const getAdjustedDate = (match: Match) => {
-    if (match.match_time?.startsWith("01:00")) {
+    if (match.match_time?.startsWith("01:00") || match.match_time?.startsWith("00:00")) {
       const [y, m, d] = match.match_date.split("-").map(Number);
       const date = new Date(y, m - 1, d);
       date.setDate(date.getDate() - 1);
@@ -93,11 +93,11 @@ const Bets = () => {
   const matchesForDay = useMemo(() => {
     const dayMatches = adjustedMatches.filter((m) => m.displayDate === currentDate);
     return dayMatches.sort((a, b) => {
-      const isA01 = a.match_time?.startsWith("01:00");
-      const isB01 = b.match_time?.startsWith("01:00");
+      const isAAdjusted = a.match_time?.startsWith("01:00") || a.match_time?.startsWith("00:00");
+      const isBAdjusted = b.match_time?.startsWith("01:00") || b.match_time?.startsWith("00:00");
 
-      if (isA01 && !isB01) return 1;
-      if (!isA01 && isB01) return -1;
+      if (isAAdjusted && !isBAdjusted) return 1;
+      if (!isAAdjusted && isBAdjusted) return -1;
 
       return (a.match_time || "").localeCompare(b.match_time || "");
     });
