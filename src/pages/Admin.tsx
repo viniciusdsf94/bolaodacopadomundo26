@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Trash2, Users } from "lucide-react";
+import { Plus, Save, Settings, CalendarDays, CheckCircle2, Trophy, Trash2, Users, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,76 @@ const Admin = () => {
   const [newMatch, setNewMatch] = useState({
     teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1",
   });
+
+  // Estado para o modal de edição de partida
+  const [editDialog, setEditDialog] = useState<{
+    isOpen: boolean;
+    matchId: string;
+    teamA: string;
+    teamB: string;
+    date: string;
+    time: string;
+    stadium: string;
+    city: string;
+    country: string;
+  }>({
+    isOpen: false,
+    matchId: "",
+    teamA: "",
+    teamB: "",
+    date: "",
+    time: "",
+    stadium: "",
+    city: "",
+    country: "",
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleOpenEditDialog = (match: any) => {
+    setEditDialog({
+      isOpen: true,
+      matchId: match.id,
+      teamA: match.team_a,
+      teamB: match.team_b,
+      date: match.match_date || "",
+      time: match.match_time || "",
+      stadium: match.stadium || "",
+      city: match.city || "",
+      country: match.country || "",
+    });
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!editDialog.matchId || !editDialog.date || !editDialog.time) {
+      toast.error("Por favor, preencha a data e o horário");
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({
+          match_date: editDialog.date,
+          match_time: editDialog.time,
+          stadium: editDialog.stadium,
+          city: editDialog.city,
+          country: editDialog.country,
+        })
+        .eq("id", editDialog.matchId);
+
+      if (error) throw error;
+
+      toast.success(`Partida ${editDialog.teamA} × ${editDialog.teamB} atualizada!`);
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      setEditDialog(prev => ({ ...prev, isOpen: false }));
+    } catch (err) {
+      console.error("Erro ao atualizar partida:", err);
+      toast.error("Erro ao atualizar a partida");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   // Estado para o modal de confirmação
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -530,6 +601,16 @@ const Admin = () => {
                             </Button>
                           )}
 
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenEditDialog(match)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:bg-secondary"
+                            title="Editar informações da partida"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+
                           <Link to={`/admin/partida/${match.id}`}>
                             <Button
                               size="sm"
@@ -711,6 +792,94 @@ const Admin = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal de edição de partida */}
+        <Dialog open={editDialog.isOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEditDialog(prev => ({ ...prev, isOpen: false }));
+          }
+        }}>
+          <DialogContent className="max-w-md bg-zinc-950 border border-zinc-800 text-foreground">
+            <DialogHeader>
+              <DialogTitle className="font-display font-bold">
+                Editar Partida: {editDialog.teamA} × {editDialog.teamB}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Data</Label>
+                  <Input
+                    type="date"
+                    value={editDialog.date}
+                    onChange={(e) => setEditDialog(prev => ({ ...prev, date: e.target.value }))}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Horário</Label>
+                  <Input
+                    type="time"
+                    value={editDialog.time}
+                    onChange={(e) => setEditDialog(prev => ({ ...prev, time: e.target.value }))}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Estádio / Local</Label>
+                <Input
+                  type="text"
+                  placeholder="Ex: Maracanã"
+                  value={editDialog.stadium}
+                  onChange={(e) => setEditDialog(prev => ({ ...prev, stadium: e.target.value }))}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Cidade</Label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: Rio de Janeiro"
+                    value={editDialog.city}
+                    onChange={(e) => setEditDialog(prev => ({ ...prev, city: e.target.value }))}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">País</Label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: Brasil"
+                    value={editDialog.country}
+                    onChange={(e) => setEditDialog(prev => ({ ...prev, country: e.target.value }))}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditDialog(prev => ({ ...prev, isOpen: false }))}
+                disabled={isUpdating}
+                className="text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmEdit}
+                disabled={isUpdating}
+                className="bg-accent text-accent-foreground text-xs"
+              >
+                {isUpdating ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
