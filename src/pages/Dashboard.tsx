@@ -1,11 +1,11 @@
-import { Trophy, TrendingUp, Target, Flame, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Trophy, TrendingUp, Target, Flame, ArrowUp, ArrowDown, Minus, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import Flag from "@/components/Flag";
 import { Button } from "@/components/ui/button";
 import { useMatches, useMyBets } from "@/hooks/useMatches";
-import { useRanking, useHistoricalRanking } from "@/hooks/useRanking";
+import { useRanking, useHistoricalRanking, useCuriosities } from "@/hooks/useRanking";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { formatDateBR } from "@/lib/formatDate";
@@ -17,6 +17,7 @@ const Dashboard = () => {
   const { data: matches = [] } = useMatches();
   const { data: myBets = [] } = useMyBets();
   const { data: ranking = [] } = useRanking();
+  const { data: curiosities = [] } = useCuriosities();
 
   const todayStr = (() => {
     const now = new Date();
@@ -135,6 +136,47 @@ const Dashboard = () => {
             </Button>
           </Link>
         </div>
+
+        {/* Curiosidades Section */}
+        {curiosities && curiosities.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
+            <div className="col-span-full flex items-center justify-between">
+              <h3 className="font-display font-bold text-sm tracking-wide uppercase text-muted-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-yellow-500 animate-pulse" />
+                Curiosidades do Bolão
+              </h3>
+            </div>
+            {curiosities.map((item, idx) => (
+              <motion.div
+                key={item.type}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-zinc-800/30 hover:bg-zinc-800/50 border border-zinc-800 hover:border-zinc-700/80 p-4 rounded-lg flex gap-3 transition-all duration-300"
+              >
+                <div className="text-3xl flex items-center justify-center bg-zinc-900/60 rounded-lg p-2 h-12 w-12 border border-zinc-800 shrink-0">
+                  {item.icon}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20 w-fit">
+                      {item.title}
+                    </span>
+                    <span className="text-xs font-bold text-white">
+                      {item.userName}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
+                  <div className="text-xs font-bold text-gradient-gold pt-1">
+                    {item.value}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div>
           <h2 className="font-display text-lg font-bold mb-3">Próximos Jogos</h2>

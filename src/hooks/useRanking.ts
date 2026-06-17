@@ -280,7 +280,7 @@ export const useHistoricalRanking = () => {
 };
 
 export interface CuriosityItem {
-  type: "montanha_russa" | "nostradamus" | "zicado" | "rei_do_muro" | "pe_quente" | "pe_frio";
+  type: "montanha_russa" | "nostradamus" | "zicado" | "maior_pontuador_dia" | "pe_quente" | "pe_frio";
   title: string;
   description: string;
   userName: string;
@@ -439,25 +439,49 @@ export const useCuriosities = () => {
         }
       });
 
-      // Rei do Muro: Most correct ties (cumulative)
-      let reiDoMuroUser: any = null;
-      let maxCorrectTies = 0;
+      // Maior pontuador do dia anterior (última data com partidas finalizadas)
+      let highestScorerUser: any = null;
+      let highestScorerPoints = 0;
+      let highestScorerDate = "";
 
-      userList.forEach(u => {
-        let correctTies = 0;
+      if (latestDateOverall) {
+        const dailyPoints: Record<string, number> = {};
+        userList.forEach(u => dailyPoints[u.id] = 0);
 
-        sortedMatches.forEach(m => {
-          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
-          if (bet && bet.score_a === bet.score_b && m.score_a === m.score_b) {
-            correctTies++;
+        // Sum points for matches finished on this latest date
+        const matchesOnLatestDate = (matches || []).filter(m => m.match_date === latestDateOverall).map(m => m.id);
+        (bets || []).forEach(bet => {
+          if (matchesOnLatestDate.includes(bet.match_id) && bet.points) {
+            dailyPoints[bet.user_id] = (dailyPoints[bet.user_id] || 0) + bet.points;
           }
         });
 
-        if (correctTies > maxCorrectTies) {
-          maxCorrectTies = correctTies;
-          reiDoMuroUser = u;
+        // Sum points for adjustments on this latest date
+        (adjustments || []).forEach((adj: any) => {
+          const adjDate = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
+          if (adjDate === latestDateOverall) {
+            dailyPoints[adj.user_id] = (dailyPoints[adj.user_id] || 0) + adj.points;
+          }
+        });
+
+        // Find the user with the maximum points
+        let maxPoints = -1;
+        let bestUser: any = null;
+        userList.forEach(u => {
+          const pts = dailyPoints[u.id] || 0;
+          if (pts > maxPoints) {
+            maxPoints = pts;
+            bestUser = u;
+          }
+        });
+
+        // Only show if the user actually gained points
+        if (bestUser && maxPoints > 0) {
+          highestScorerUser = bestUser;
+          highestScorerPoints = maxPoints;
+          highestScorerDate = latestDateOverall;
         }
-      });
+      }
 
       // Pé Quente & Pé Frio (Winner streaks)
       let peQuenteUser: any = null;
@@ -560,14 +584,16 @@ export const useCuriosities = () => {
         });
       }
 
-      if (reiDoMuroUser && maxCorrectTies >= 3) {
-        curiosities.push({
-          type: "rei_do_muro",
-          title: "🤝 Rei do Muro",
-          description: `Acertou a ocorrência de empate em ${maxCorrectTies} ${maxCorrectTies === 1 ? 'jogo' : 'jogos'}.`,
-          userName: `${reiDoMuroUser.first_name} ${reiDoMuroUser.last_name || ''}`.trim(),
-          value: `${maxCorrectTies} empates`,
-          icon: "🤝"
+      if (highestScorerUser && highestScorerPoints > 0) {
+        const [y, m, d] = highestScorerDate.split('-');
+        const formattedDate = `${d}/${m}`;
+        curiosities.unshift({
+          type: "maior_pontuador_dia",
+          title: "🏆 Destaque de Ontem",
+          description: `Fez a maior pontuação nos jogos do dia ${formattedDate}, acumulando ${highestScorerPoints} pontos!`,
+          userName: `${highestScorerUser.first_name} ${highestScorerUser.last_name || ''}`.trim(),
+          value: `${highestScorerPoints} pontos`,
+          icon: "🏆"
         });
       }
 
