@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import { Trophy, ChevronUp, ChevronDown, Minus, Sparkles, Check, RotateCcw, Eye, EyeOff, Users } from "lucide-react";
 import { motion } from "framer-motion";
@@ -45,7 +46,7 @@ const Ranking = () => {
     return null;
   };
 
-  if (isLoading || isHistoricalLoading || isCuriositiesLoading) {
+  if (isLoading || isHistoricalLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center py-12">
@@ -69,7 +70,7 @@ const Ranking = () => {
         </div>
 
         {/* Curiosidades Section */}
-        {curiosities && curiosities.length > 0 && (
+        {!isCuriositiesLoading && curiosities && curiosities.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
             <div className="col-span-full flex items-center justify-between">
               <h3 className="font-display font-bold text-sm tracking-wide uppercase text-muted-foreground flex items-center gap-2">

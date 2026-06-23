@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,25 +17,23 @@ export const useRanking = () => {
   return useQuery({
     queryKey: ["ranking"],
     queryFn: async () => {
-      // Buscar todos os usuários e seus pontos totais
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: betsData, error: betsError } = await (supabase as any)
-        .from("bets")
-        .select("user_id, points, match_id");
+      // Buscar dados em paralelo
+      const [betsResult, adjustmentsResult, usersResult, matchesResult] = await Promise.all([
+        (supabase as any).from("bets").select("user_id, points, match_id"),
+        (supabase as any).from("point_adjustments").select("id, user_id, points, created_at"),
+        (supabase as any).from("profiles").select("id, first_name, last_name").order("first_name", { ascending: true }),
+        (supabase as any).from("matches").select("id, status, match_date, match_time")
+      ]);
 
-      if (betsError) {
-        throw new Error(betsError.message);
-      }
+      if (betsResult.error) throw new Error(betsResult.error.message);
+      if (adjustmentsResult.error) throw new Error(adjustmentsResult.error.message);
+      if (usersResult.error) throw new Error(usersResult.error.message);
+      if (matchesResult.error) throw new Error(matchesResult.error.message);
 
-      // Fetch point adjustments
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: adjustmentsData, error: adjustmentsError } = await (supabase as any)
-        .from("point_adjustments")
-        .select("id, user_id, points, created_at");
-
-      if (adjustmentsError) {
-        throw new Error(adjustmentsError.message);
-      }
+      const betsData = betsResult.data;
+      const adjustmentsData = adjustmentsResult.data;
+      const usersData = usersResult.data;
+      const matchesData = matchesResult.data;
 
       // Agrupar por usuário e somar pontos
       const userPoints: Record<string, number> = {};
@@ -47,23 +46,11 @@ export const useRanking = () => {
         userPoints[adj.user_id] = (userPoints[adj.user_id] || 0) + (adj.points || 0);
       });
 
-      // Buscar informações de TODOS os usuários (profiles)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: usersData, error: usersError } = await (supabase as any)
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .order("first_name", { ascending: true });
-
-      if (usersError) {
-        throw new Error(usersError.message);
-      }
-
-      // Fetch all matches to find live and latest finished
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: matchesData, error: matchesError } = await (supabase as any)
-        .from("matches")
-        .select("id, status, match_date, match_time");
-      if (matchesError) throw new Error(matchesError.message);
+      // Mapear partidas por id para busca rápida
+      const matchesMap: Record<string, any> = {};
+      (matchesData || []).forEach((m: any) => {
+        matchesMap[m.id] = m;
+      });
 
       // Encontrar a última data em que houve alguma partida finalizada ou ajuste de pontos
       const finished = matchesData.filter((m: any) => m.status === "finished");
@@ -88,7 +75,7 @@ export const useRanking = () => {
       if (latestDateOverall) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (betsData || []).forEach((bet: any) => {
-          const match = matchesData.find((m: any) => m.id === bet.match_id);
+          const match = matchesMap[bet.match_id];
           if (match && match.status === "finished" && match.match_date === latestDateOverall) {
             userPrevPoints[bet.user_id] = (userPrevPoints[bet.user_id] || 0) - (bet.points || 0);
           }
@@ -171,39 +158,23 @@ export const useHistoricalRanking = () => {
   return useQuery({
     queryKey: ["historical_ranking"],
     queryFn: async () => {
-      // 1. Fetch finished matches
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: matchesData, error: matchesError } = await (supabase as any)
-        .from("matches")
-        .select("id, match_date, status")
-        .eq("status", "finished")
-        .order("match_date", { ascending: true });
+      // Fetch dados em paralelo
+      const [matchesResult, betsResult, profilesResult, adjustmentsResult] = await Promise.all([
+        (supabase as any).from("matches").select("id, match_date, status").eq("status", "finished").order("match_date", { ascending: true }),
+        (supabase as any).from("bets").select("match_id, user_id, points"),
+        (supabase as any).from("profiles").select("id, first_name, last_name"),
+        (supabase as any).from("point_adjustments").select("user_id, points, created_at")
+      ]);
 
-      if (matchesError) throw new Error(matchesError.message);
+      if (matchesResult.error) throw new Error(matchesResult.error.message);
+      if (betsResult.error) throw new Error(betsResult.error.message);
+      if (profilesResult.error) throw new Error(profilesResult.error.message);
+      if (adjustmentsResult.error) throw new Error(adjustmentsResult.error.message);
 
-      // 2. Fetch all bets
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: betsData, error: betsError } = await (supabase as any)
-        .from("bets")
-        .select("match_id, user_id, points");
-
-      if (betsError) throw new Error(betsError.message);
-
-      // 3. Fetch all profiles
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profilesData, error: profilesError } = await (supabase as any)
-        .from("profiles")
-        .select("id, first_name, last_name");
-
-      if (profilesError) throw new Error(profilesError.message);
-
-      // 4. Fetch point adjustments
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: adjustmentsData, error: adjustmentsError } = await (supabase as any)
-        .from("point_adjustments")
-        .select("user_id, points, created_at");
-
-      if (adjustmentsError) throw new Error(adjustmentsError.message);
+      const matchesData = matchesResult.data;
+      const betsData = betsResult.data;
+      const profilesData = profilesResult.data;
+      const adjustmentsData = adjustmentsResult.data;
 
       if (!matchesData || matchesData.length === 0) return { chartData: [], users: profilesData || [] };
 
@@ -235,23 +206,39 @@ export const useHistoricalRanking = () => {
       const cumulativePoints: Record<string, number> = {};
       userList.forEach(u => cumulativePoints[u.id] = 0);
 
+      // Group bets by date for O(1) matching
+      const betsByDate: Record<string, typeof betsData> = {};
+      (betsData || []).forEach(bet => {
+        const date = matchDates[bet.match_id];
+        if (date) {
+          if (!betsByDate[date]) betsByDate[date] = [];
+          betsByDate[date].push(bet);
+        }
+      });
+
+      // Group adjustments by date for O(1) matching
+      const adjustmentsByDate: Record<string, typeof adjustmentsData> = {};
+      (adjustmentsData || []).forEach((adj: any) => {
+        const date = adj.date;
+        if (date) {
+          if (!adjustmentsByDate[date]) adjustmentsByDate[date] = [];
+          adjustmentsByDate[date].push(adj);
+        }
+      });
+
       uniqueDates.forEach((date) => {
-        // Find matches that happened exactly on this date
-        const matchesOnDate = matchesData.filter(m => m.match_date === date).map(m => m.id);
-        
-        // Add points for bets on those matches
-        betsData.forEach(bet => {
-          if (matchesOnDate.includes(bet.match_id) && bet.points) {
+        // Add points for bets on this date
+        const betsOnDate = betsByDate[date] || [];
+        betsOnDate.forEach(bet => {
+          if (bet.points) {
             cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
           }
         });
 
         // Add points for adjustments on this date
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (adjustmentsData || []).forEach((adj: any) => {
-          if (adj.date === date) {
-            cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
-          }
+        const adjsOnDate = adjustmentsByDate[date] || [];
+        adjsOnDate.forEach((adj: any) => {
+          cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
         });
 
         // Compute rankings for this date
@@ -292,30 +279,23 @@ export const useCuriosities = () => {
   return useQuery({
     queryKey: ["curiosities"],
     queryFn: async () => {
-      // 1. Fetch finished matches (sorted chronologically)
-      const { data: matches, error: matchesError } = await supabase
-        .from("matches")
-        .select("id, match_date, match_time, score_a, score_b, status")
-        .eq("status", "finished");
-      if (matchesError) throw matchesError;
+      // Fetch dados em paralelo
+      const [matchesResult, betsResult, profilesResult, adjustmentsResult] = await Promise.all([
+        supabase.from("matches").select("id, match_date, match_time, score_a, score_b, status").eq("status", "finished"),
+        supabase.from("bets").select("match_id, user_id, score_a, score_b, points"),
+        supabase.from("profiles").select("id, first_name, last_name"),
+        supabase.from("point_adjustments").select("user_id, points, created_at")
+      ]);
 
-      // 2. Fetch all bets
-      const { data: bets, error: betsError } = await supabase
-        .from("bets")
-        .select("match_id, user_id, score_a, score_b, points");
-      if (betsError) throw betsError;
+      if (matchesResult.error) throw matchesResult.error;
+      if (betsResult.error) throw betsResult.error;
+      if (profilesResult.error) throw profilesResult.error;
+      if (adjustmentsResult.error) throw adjustmentsResult.error;
 
-      // 3. Fetch profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name");
-      if (profilesError) throw profilesError;
-
-      // 4. Fetch point adjustments to calculate history
-      const { data: adjustments, error: adjustmentsError } = await supabase
-        .from("point_adjustments")
-        .select("user_id, points, created_at");
-      if (adjustmentsError) throw adjustmentsError;
+      const matches = matchesResult.data;
+      const bets = betsResult.data;
+      const profiles = profilesResult.data;
+      const adjustments = adjustmentsResult.data;
 
       const userList = profiles || [];
       const matchDates: Record<string, string> = {};
@@ -337,17 +317,37 @@ export const useCuriosities = () => {
       const positionsHistory: Record<string, number[]> = {};
       userList.forEach(u => positionsHistory[u.id] = []);
 
+      // Group bets by date for O(1) matching
+      const betsByDate: Record<string, typeof bets> = {};
+      (bets || []).forEach(bet => {
+        const date = matchDates[bet.match_id];
+        if (date) {
+          if (!betsByDate[date]) betsByDate[date] = [];
+          betsByDate[date].push(bet);
+        }
+      });
+
+      // Group adjustments by date for O(1) matching
+      const adjustmentsByDate: Record<string, typeof adjustments> = {};
+      (adjustments || []).forEach((adj: any) => {
+        const date = adj.date;
+        if (date) {
+          if (!adjustmentsByDate[date]) adjustmentsByDate[date] = [];
+          adjustmentsByDate[date].push(adj);
+        }
+      });
+
       uniqueDates.forEach((date) => {
-        const matchesOnDate = (matches || []).filter(m => m.match_date === date).map(m => m.id);
-        (bets || []).forEach(bet => {
-          if (matchesOnDate.includes(bet.match_id) && bet.points) {
+        const betsOnDate = betsByDate[date] || [];
+        betsOnDate.forEach(bet => {
+          if (bet.points) {
             cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
           }
         });
-        (adjustments || []).forEach((adj: any) => {
-          if (adj.date === date) {
-            cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
-          }
+
+        const adjsOnDate = adjustmentsByDate[date] || [];
+        adjsOnDate.forEach((adj: any) => {
+          cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
         });
 
         const rankingForDate = userList.map(u => ({
@@ -389,6 +389,12 @@ export const useCuriosities = () => {
         return dateTimeA.localeCompare(dateTimeB);
       });
 
+      // Index bets by `${user_id}_${match_id}` for O(1) lookups
+      const betsMap = new Map<string, typeof bets[0]>();
+      (bets || []).forEach(bet => {
+        betsMap.set(`${bet.user_id}_${bet.match_id}`, bet);
+      });
+
       let nostradamusUser: any = null;
       let maxExactStreak = 0;
 
@@ -396,7 +402,7 @@ export const useCuriosities = () => {
         let currentStreak = 0;
 
         sortedMatches.forEach(m => {
-          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          const bet = betsMap.get(`${u.id}_${m.id}`);
           if (bet) {
             const isExact = bet.score_a === m.score_a && bet.score_b === m.score_b;
             if (isExact) {
@@ -423,7 +429,7 @@ export const useCuriosities = () => {
         let currentStreak = 0;
 
         sortedMatches.forEach(m => {
-          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          const bet = betsMap.get(`${u.id}_${m.id}`);
           if (bet && bet.points === 0) {
             currentStreak++;
           } else if (bet && (bet.points || 0) > 0) {
@@ -444,14 +450,30 @@ export const useCuriosities = () => {
       let highestScorerPoints = 0;
       let highestScorerDate = "";
 
+      // Find the last date that has finished matches or adjustments
+      let latestDateOverall = "";
+      const finished = (matches || []).filter((m: any) => m.status === "finished");
+      if (finished.length > 0) {
+        const dates = finished.map((m: any) => m.match_date);
+        latestDateOverall = dates.reduce((max, d) => d > max ? d : max, dates[0]);
+      }
+
+      if (adjustments && adjustments.length > 0) {
+        const adjDatesOnly = adjustments.map((a: any) => new Date(a.created_at.replace(" ", "T")).toISOString().split('T')[0]);
+        const maxAdjDate = adjDatesOnly.reduce((max, d) => d > max ? d : max, adjDatesOnly[0]);
+        if (!latestDateOverall || maxAdjDate > latestDateOverall) {
+          latestDateOverall = maxAdjDate;
+        }
+      }
+
       if (latestDateOverall) {
         const dailyPoints: Record<string, number> = {};
         userList.forEach(u => dailyPoints[u.id] = 0);
 
         // Sum points for matches finished on this latest date
-        const matchesOnLatestDate = (matches || []).filter(m => m.match_date === latestDateOverall).map(m => m.id);
-        (bets || []).forEach(bet => {
-          if (matchesOnLatestDate.includes(bet.match_id) && bet.points) {
+        const betsOnLatestDate = betsByDate[latestDateOverall] || [];
+        betsOnLatestDate.forEach(bet => {
+          if (bet.points) {
             dailyPoints[bet.user_id] = (dailyPoints[bet.user_id] || 0) + bet.points;
           }
         });
@@ -495,7 +517,7 @@ export const useCuriosities = () => {
         let currentLoserStreak = 0;
 
         sortedMatches.forEach(m => {
-          const bet = (bets || []).find(b => b.user_id === u.id && b.match_id === m.id);
+          const bet = betsMap.get(`${u.id}_${m.id}`);
           if (bet) {
             const betWinner = bet.score_a > bet.score_b ? "a" : bet.score_b > bet.score_a ? "b" : "draw";
             const matchWinner = m.score_a > m.score_b ? "a" : m.score_b > m.score_a ? "b" : "draw";
