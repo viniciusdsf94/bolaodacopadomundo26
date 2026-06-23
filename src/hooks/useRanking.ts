@@ -445,24 +445,36 @@ export const useCuriosities = () => {
         }
       });
 
-      // Maior pontuador do dia anterior (última data com partidas finalizadas)
+      // Maior pontuador do dia anterior (última data com partidas finalizadas antes de hoje)
       let highestScorerUser: any = null;
       let highestScorerPoints = 0;
       let highestScorerDate = "";
 
-      // Find the last date that has finished matches or adjustments
+      const todayStr = (() => {
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      })();
+
+      // Find the last date prior to today that has finished matches or adjustments
       let latestDateOverall = "";
-      const finished = (matches || []).filter((m: any) => m.status === "finished");
+      const finished = (matches || []).filter((m: any) => m.status === "finished" && m.match_date < todayStr);
       if (finished.length > 0) {
         const dates = finished.map((m: any) => m.match_date);
         latestDateOverall = dates.reduce((max, d) => d > max ? d : max, dates[0]);
       }
 
       if (adjustments && adjustments.length > 0) {
-        const adjDatesOnly = adjustments.map((a: any) => new Date(a.created_at.replace(" ", "T")).toISOString().split('T')[0]);
-        const maxAdjDate = adjDatesOnly.reduce((max, d) => d > max ? d : max, adjDatesOnly[0]);
-        if (!latestDateOverall || maxAdjDate > latestDateOverall) {
-          latestDateOverall = maxAdjDate;
+        const adjDatesOnly = adjustments
+          .map((a: any) => new Date(a.created_at.replace(" ", "T")).toISOString().split('T')[0])
+          .filter((d: string) => d < todayStr);
+        if (adjDatesOnly.length > 0) {
+          const maxAdjDate = adjDatesOnly.reduce((max, d) => d > max ? d : max, adjDatesOnly[0]);
+          if (!latestDateOverall || maxAdjDate > latestDateOverall) {
+            latestDateOverall = maxAdjDate;
+          }
         }
       }
 
