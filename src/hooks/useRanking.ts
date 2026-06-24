@@ -13,13 +13,39 @@ export interface RankingUser {
   position_change: number;
 }
 
+const fetchAllBetsWithResult = async (selectFields: string): Promise<{ data: any[] | null; error: any | null }> => {
+  try {
+    let allBets: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    
+    while (true) {
+      const { data, error } = await supabase
+        .from("bets")
+        .select(selectFields)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+      if (error) return { data: null, error };
+      if (!data || data.length === 0) break;
+      
+      allBets = [...allBets, ...data];
+      if (data.length < pageSize) break;
+      page++;
+    }
+    
+    return { data: allBets, error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
+  }
+};
+
 export const useRanking = () => {
   return useQuery({
     queryKey: ["ranking"],
     queryFn: async () => {
       // Buscar dados em paralelo
       const [betsResult, adjustmentsResult, usersResult, matchesResult] = await Promise.all([
-        (supabase as any).from("bets").select("user_id, points, match_id"),
+        fetchAllBetsWithResult("user_id, points, match_id"),
         (supabase as any).from("point_adjustments").select("id, user_id, points, created_at"),
         (supabase as any).from("profiles").select("id, first_name, last_name").order("first_name", { ascending: true }),
         (supabase as any).from("matches").select("id, status, match_date, match_time")
@@ -161,7 +187,7 @@ export const useHistoricalRanking = () => {
       // Fetch dados em paralelo
       const [matchesResult, betsResult, profilesResult, adjustmentsResult] = await Promise.all([
         (supabase as any).from("matches").select("id, match_date, status").eq("status", "finished").order("match_date", { ascending: true }),
-        (supabase as any).from("bets").select("match_id, user_id, points"),
+        fetchAllBetsWithResult("match_id, user_id, points"),
         (supabase as any).from("profiles").select("id, first_name, last_name"),
         (supabase as any).from("point_adjustments").select("user_id, points, created_at")
       ]);
@@ -282,7 +308,7 @@ export const useCuriosities = () => {
       // Fetch dados em paralelo
       const [matchesResult, betsResult, profilesResult, adjustmentsResult] = await Promise.all([
         supabase.from("matches").select("id, match_date, match_time, score_a, score_b, status").eq("status", "finished"),
-        supabase.from("bets").select("match_id, user_id, score_a, score_b, points"),
+        fetchAllBetsWithResult("match_id, user_id, score_a, score_b, points"),
         supabase.from("profiles").select("id, first_name, last_name"),
         supabase.from("point_adjustments").select("user_id, points, created_at")
       ]);
