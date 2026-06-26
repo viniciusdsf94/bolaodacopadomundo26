@@ -57,14 +57,18 @@ const Bets = () => {
     return `${yyyy}-${mm}-${dd}`;
   }, []);
 
-  const defaultIndex = useMemo(() => {
-    const idx = sortedDates.findIndex((d) => d >= todayStr);
-    return idx >= 0 ? idx : 0;
-  }, [sortedDates, todayStr]);
-
-  const [dateIndex, setDateIndex] = useState(defaultIndex);
+  const [dateIndex, setDateIndex] = useState(0);
+  const hasInitializedDate = useRef(false);
 
   const currentDate = sortedDates[dateIndex] ?? sortedDates[0];
+
+  useEffect(() => {
+    if (sortedDates.length > 0 && !hasInitializedDate.current) {
+      const idx = sortedDates.findIndex((d) => d >= todayStr);
+      setDateIndex(idx >= 0 ? idx : 0);
+      hasInitializedDate.current = true;
+    }
+  }, [sortedDates, todayStr]);
 
   useEffect(() => {
     if (activeDayRef.current) {

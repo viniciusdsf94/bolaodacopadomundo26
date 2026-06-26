@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, ListChecks, History, LogOut, Shield, Trophy } from "lucide-react";
+import { Home, ListChecks, History, LogOut, Shield, Trophy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
@@ -15,6 +18,32 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    toast.loading("Atualizando dados...", { id: "refresh-toast" });
+    try {
+      // 1. Refetch all active queries to fetch fresh data from Supabase
+      await queryClient.refetchQueries();
+      
+      // 2. Trigger Service Worker update check
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.update();
+        }
+      }
+      
+      toast.success("Dados atualizados!", { id: "refresh-toast" });
+    } catch (error) {
+      console.error("Erro ao atualizar dados:", error);
+      toast.error("Erro ao atualizar dados. Tente novamente.", { id: "refresh-toast" });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -74,6 +103,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </Button>
               </Link>
             )}
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Atualizar dados"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"

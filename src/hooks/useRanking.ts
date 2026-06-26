@@ -43,130 +43,85 @@ export const useRanking = () => {
   return useQuery({
     queryKey: ["ranking"],
     queryFn: async () => {
-      // Buscar dados em paralelo
-      const [betsResult, adjustmentsResult, usersResult, matchesResult] = await Promise.all([
-        fetchAllBetsWithResult("user_id, points, match_id"),
-        (supabase as any).from("point_adjustments").select("id, user_id, points, created_at"),
-        (supabase as any).from("profiles").select("id, first_name, last_name").order("first_name", { ascending: true }),
-        (supabase as any).from("matches").select("id, status, match_date, match_time")
-      ]);
-
-      if (betsResult.error) throw new Error(betsResult.error.message);
-      if (adjustmentsResult.error) throw new Error(adjustmentsResult.error.message);
-      if (usersResult.error) throw new Error(usersResult.error.message);
-      if (matchesResult.error) throw new Error(matchesResult.error.message);
-
-      const betsData = betsResult.data;
-      const adjustmentsData = adjustmentsResult.data;
-      const usersData = usersResult.data;
-      const matchesData = matchesResult.data;
-
-      // Agrupar por usuário e somar pontos
-      const userPoints: Record<string, number> = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (betsData || []).forEach((bet: any) => {
-        userPoints[bet.user_id] = (userPoints[bet.user_id] || 0) + (bet.points || 0);
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (adjustmentsData || []).forEach((adj: any) => {
-        userPoints[adj.user_id] = (userPoints[adj.user_id] || 0) + (adj.points || 0);
-      });
-
-      // Mapear partidas por id para busca rápida
-      const matchesMap: Record<string, any> = {};
-      (matchesData || []).forEach((m: any) => {
-        matchesMap[m.id] = m;
-      });
-
-      // Encontrar a última data em que houve alguma partida finalizada ou ajuste de pontos
-      const finished = matchesData.filter((m: any) => m.status === "finished");
-      let latestDateOverall = "";
-
-      if (finished.length > 0) {
-        const dates = finished.map((m: any) => m.match_date);
-        latestDateOverall = dates.reduce((max, d) => d > max ? d : max, dates[0]);
-      }
-
-      if (adjustmentsData && adjustmentsData.length > 0) {
-        const adjDates = adjustmentsData.map((a: any) => new Date(a.created_at.replace(" ", "T")).toISOString().split('T')[0]);
-        const maxAdjDate = adjDates.reduce((max, d) => d > max ? d : max, adjDates[0]);
-        if (!latestDateOverall || maxAdjDate > latestDateOverall) {
-          latestDateOverall = maxAdjDate;
-        }
-      }
-
-      // Calcular pontos anteriores desconsiderando os eventos da última data (para ver a tendência em relação ao dia anterior)
-      const userPrevPoints: Record<string, number> = { ...userPoints };
+      // Fetch profiles with total_points from profiles table
+      const { data: usersData, error: usersError } = await (supabase as any)
+        .from("profiles")
+        .select("id, first_name, last_name, total_points");
       
-      if (latestDateOverall) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (betsData || []).forEach((bet: any) => {
-          const match = matchesMap[bet.match_id];
-          if (match && match.status === "finished" && match.match_date === latestDateOverall) {
-            userPrevPoints[bet.user_id] = (userPrevPoints[bet.user_id] || 0) - (bet.points || 0);
-          }
-        });
+      if (usersError) throw new Error(usersError.message);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (adjustmentsData || []).forEach((adj: any) => {
-          const adjDate = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
-          if (adjDate === latestDateOverall) {
-            userPrevPoints[adj.user_id] = (userPrevPoints[adj.user_id] || 0) - (adj.points || 0);
-          }
-        });
+      // Fetch historical positions to calculate trends (up/down/none)
+      const { data: historyData, error: historyError } = await (supabase as any)
+        .from("v_historical_rankings")
+        .select("user_id, date, position, total_points");
+
+      const hasHistory = !historyError && historyData && historyData.length > 0;
+      
+      // Find the unique dates in history
+      const uniqueDates = hasHistory 
+        ? Array.from(new Set(historyData.map(h => h.date))).sort() 
+        : [];
+      
+      const latestDate = uniqueDates[uniqueDates.length - 1];
+      const prevDate = uniqueDates[uniqueDates.length - 2];
+
+      // Map previous positions
+      const prevPositionsMap: Record<string, number> = {};
+      if (prevDate) {
+        historyData
+          .filter(h => h.date === prevDate)
+          .forEach(h => {
+            prevPositionsMap[h.user_id] = h.position;
+          });
       }
 
-      // Calculate previous ranking positions
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const prevRankingList = (usersData || []).map((user: any) => ({
-        user_id: user.id,
-        prev_points: userPrevPoints[user.id] || 0
-      })).sort((a, b) => {
-        if (b.prev_points !== a.prev_points) return b.prev_points - a.prev_points;
-        return a.user_id.localeCompare(b.user_id); // Tie-breaker estável
-      });
+      // Map current positions (from the latest historical record)
+      const currentPositionsMap: Record<string, number> = {};
+      if (latestDate) {
+        historyData
+          .filter(h => h.date === latestDate)
+          .forEach(h => {
+            currentPositionsMap[h.user_id] = h.position;
+          });
+      }
 
-      const prevPositions: Record<string, number> = {};
-      prevRankingList.forEach((u, index) => {
-        prevPositions[u.user_id] = index + 1;
-      });
-
-      // Montar ranking com TODOS os usuários
+      // Build ranking data
       const rankingData: RankingUser[] = (usersData || [])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((user: any) => ({
-          user_id: user.id,
-          email: "", // Será preenchido depois se necessário
-          first_name: user.first_name || "",
-          last_name: user.last_name || "",
-          total_points: userPoints[user.id] || 0,
-          position: 0, // Será atualizado depois
-          trend: 'none' as 'up' | 'down' | 'none',
-          position_change: 0
-        }))
-        .sort((a, b) => {
-          if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-          return a.user_id.localeCompare(b.user_id); // Mesmo tie-breaker
-        })
-        .map((user, index) => {
-          const currentPos = index + 1;
-          const prevPos = prevPositions[user.user_id];
+        .map((user: any) => {
+          const currentPos = currentPositionsMap[user.id] || 0;
+          const prevPos = prevPositionsMap[user.id] || 0;
+          
           let trend: 'up' | 'down' | 'none' = 'none';
           let change = 0;
 
-          if (prevPos) {
+          if (currentPos && prevPos) {
             change = prevPos - currentPos;
             if (change > 0) trend = 'up';
             else if (change < 0) trend = 'down';
           }
 
           return {
-            ...user,
-            position: currentPos,
+            user_id: user.id,
+            email: "",
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            total_points: user.total_points || 0,
+            position: currentPos || 1, // Fallback if no history yet
             trend,
             position_change: Math.abs(change)
           };
         });
+
+      // If there was no history, sort by total_points to assign positions
+      if (!latestDate) {
+        rankingData.sort((a, b) => b.total_points - a.total_points);
+        rankingData.forEach((r, idx) => {
+          r.position = idx + 1;
+        });
+      } else {
+        // Sort by position according to the view
+        rankingData.sort((a, b) => a.position - b.position);
+      }
 
       return rankingData;
     },
@@ -184,108 +139,40 @@ export const useHistoricalRanking = () => {
   return useQuery({
     queryKey: ["historical_ranking"],
     queryFn: async () => {
-      // Fetch dados em paralelo
-      const [matchesResult, betsResult, profilesResult, adjustmentsResult] = await Promise.all([
-        (supabase as any).from("matches").select("id, match_date, status").eq("status", "finished").order("match_date", { ascending: true }),
-        fetchAllBetsWithResult("match_id, user_id, points"),
-        (supabase as any).from("profiles").select("id, first_name, last_name"),
-        (supabase as any).from("point_adjustments").select("user_id, points, created_at")
-      ]);
+      const { data, error } = await (supabase as any)
+        .from("v_historical_rankings")
+        .select("user_id, date, position, total_points, first_name, last_name")
+        .order("date", { ascending: true });
 
-      if (matchesResult.error) throw new Error(matchesResult.error.message);
-      if (betsResult.error) throw new Error(betsResult.error.message);
-      if (profilesResult.error) throw new Error(profilesResult.error.message);
-      if (adjustmentsResult.error) throw new Error(adjustmentsResult.error.message);
+      if (error) throw new Error(error.message);
 
-      const matchesData = matchesResult.data;
-      const betsData = betsResult.data;
-      const profilesData = profilesResult.data;
-      const adjustmentsData = adjustmentsResult.data;
+      if (!data || data.length === 0) {
+        const { data: profiles } = await (supabase as any).from("profiles").select("id, first_name, last_name");
+        return { chartData: [], users: profiles || [] };
+      }
 
-      if (!matchesData || matchesData.length === 0) return { chartData: [], users: profilesData || [] };
+      // Mapear dados para o formato esperado pelo recharts e pelo frontend
+      const chartDataMap: Record<string, ChartDataPoint> = {};
+      const usersMap: Record<string, { id: string; first_name: string; last_name: string }> = {};
 
-      // Map match_id to match_date
-      const matchDates: Record<string, string> = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      matchesData.forEach((m: any) => {
-        matchDates[m.id] = m.match_date;
-      });
-
-      // Map adjustment dates
-      const adjDates: string[] = [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (adjustmentsData || []).forEach((adj: any) => {
-        const d = new Date(adj.created_at.replace(" ", "T")).toISOString().split('T')[0];
-        adj.date = d;
-        adjDates.push(d);
-      });
-
-      // Get unique sorted dates
-      const uniqueDates = Array.from(new Set([...Object.values(matchDates), ...adjDates])).sort();
-
-      const chartData: ChartDataPoint[] = [];
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const userList = profilesData || [];
-
-      // For each date, compute cumulative points
-      const cumulativePoints: Record<string, number> = {};
-      userList.forEach(u => cumulativePoints[u.id] = 0);
-
-      // Group bets by date for O(1) matching
-      const betsByDate: Record<string, typeof betsData> = {};
-      (betsData || []).forEach(bet => {
-        const date = matchDates[bet.match_id];
-        if (date) {
-          if (!betsByDate[date]) betsByDate[date] = [];
-          betsByDate[date].push(bet);
+      data.forEach((row: any) => {
+        const dateStr = row.date;
+        if (!chartDataMap[dateStr]) {
+          chartDataMap[dateStr] = { date: dateStr };
         }
-      });
+        chartDataMap[dateStr][row.user_id] = row.position;
+        chartDataMap[dateStr][`${row.user_id}_points`] = row.total_points;
 
-      // Group adjustments by date for O(1) matching
-      const adjustmentsByDate: Record<string, typeof adjustmentsData> = {};
-      (adjustmentsData || []).forEach((adj: any) => {
-        const date = adj.date;
-        if (date) {
-          if (!adjustmentsByDate[date]) adjustmentsByDate[date] = [];
-          adjustmentsByDate[date].push(adj);
-        }
-      });
-
-      uniqueDates.forEach((date) => {
-        // Add points for bets on this date
-        const betsOnDate = betsByDate[date] || [];
-        betsOnDate.forEach(bet => {
-          if (bet.points) {
-            cumulativePoints[bet.user_id] = (cumulativePoints[bet.user_id] || 0) + bet.points;
-          }
-        });
-
-        // Add points for adjustments on this date
-        const adjsOnDate = adjustmentsByDate[date] || [];
-        adjsOnDate.forEach((adj: any) => {
-          cumulativePoints[adj.user_id] = (cumulativePoints[adj.user_id] || 0) + adj.points;
-        });
-
-        // Compute rankings for this date
-        const rankingForDate = userList.map(u => ({
-          userId: u.id,
-          points: cumulativePoints[u.id] || 0
-        })).sort((a, b) => b.points - a.points);
-
-        // Assign positions (handling ties could mean same position, but simple index + 1 is fine for now)
-        const dataPoint: ChartDataPoint = { date };
-        rankingForDate.forEach((r, idx) => {
-          dataPoint[r.userId] = idx + 1;
-          dataPoint[`${r.userId}_points`] = r.points;
-        });
-
-        chartData.push(dataPoint);
+        usersMap[row.user_id] = {
+          id: row.user_id,
+          first_name: row.first_name,
+          last_name: row.last_name
+        };
       });
 
       return {
-        chartData,
-        users: userList
+        chartData: Object.values(chartDataMap),
+        users: Object.values(usersMap)
       };
     },
     staleTime: 30000,
