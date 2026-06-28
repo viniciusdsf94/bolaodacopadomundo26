@@ -121,19 +121,11 @@ const AdminMatchUsers = () => {
                             <span className="text-primary flex items-center gap-1 font-medium">
                               <CheckCircle2 className="h-3 w-3" /> Palpitou
                             </span>
-                            {user.betDetails && (
+                            {match.is_knockout && (
                               <>
                                 <span className="text-muted-foreground/50">•</span>
-                                <span className="font-semibold text-foreground">
-                                  Placar: {user.betDetails.score_a} × {user.betDetails.score_b}
-                                </span>
-                              </>
-                            )}
-                            {match.is_knockout && user.betDetails?.penalty_winner && (
-                              <>
-                                <span className="text-muted-foreground/50">•</span>
-                                <span className="font-semibold text-accent">
-                                  Pênaltis: {user.betDetails.penalty_winner === "a" ? match.team_a : match.team_b}
+                                <span className={`font-semibold ${user.betDetails?.penalty_winner ? "text-accent" : "text-destructive"}`}>
+                                  Palpite de Pênaltis: {user.betDetails?.penalty_winner ? "Definido" : "Pendente"}
                                 </span>
                               </>
                             )}
