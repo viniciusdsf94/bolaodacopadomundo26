@@ -117,14 +117,32 @@ const AdminMatchUsers = () => {
                         </div>
                         <div>
                           <p className="text-sm font-bold">{user.displayName}</p>
-                          <p className="text-xs text-primary flex items-center gap-1 mt-1">
-                            <CheckCircle2 className="h-3 w-3" /> Palpitou
-                          </p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs mt-1">
+                            <span className="text-primary flex items-center gap-1 font-medium">
+                              <CheckCircle2 className="h-3 w-3" /> Palpitou
+                            </span>
+                            {user.betDetails && (
+                              <>
+                                <span className="text-muted-foreground/50">•</span>
+                                <span className="font-semibold text-foreground">
+                                  Placar: {user.betDetails.score_a} × {user.betDetails.score_b}
+                                </span>
+                              </>
+                            )}
+                            {match.is_knockout && user.betDetails?.penalty_winner && (
+                              <>
+                                <span className="text-muted-foreground/50">•</span>
+                                <span className="font-semibold text-accent">
+                                  Pênaltis: {user.betDetails.penalty_winner === "a" ? match.team_a : match.team_b}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
                       {user.betDetails && user.betDetails.points !== null && (
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className={`text-xs font-bold ${user.betDetails.points > 0 ? "text-accent" : "text-muted-foreground"}`}>
                             {user.betDetails.points > 0 ? `+${user.betDetails.points}` : "0"} pts
                           </p>
