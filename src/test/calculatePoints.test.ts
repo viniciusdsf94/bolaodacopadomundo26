@@ -93,4 +93,21 @@ describe("calculateBetPoints with Knockout & Penalties", () => {
     // 4 points * 2 multiplier = 8 points
     expect(points).toBe(8);
   });
+
+  it("Scenario 6: Truncation check. Bet gets 5 points, multiplier is 1.33. Raw total: 5 * 1.33 = 6.65. Truncated to 1 decimal place should be 6.6 points.", () => {
+    const bet = { score_a: 2, score_b: 1, penalty_winner: "b" };
+    const match = {
+      score_a: 1,
+      score_b: 1,
+      multiplier: 1.33,
+      scoring_rules: mockScoringRules,
+      is_knockout: true,
+      penalty_winner: "b"
+    };
+
+    // Vencedor dos Pênaltis = 4 points.
+    // 4 * 1.33 = 5.32. Truncated to 1 decimal = 5.3.
+    const points = calculateBetPoints(bet, match);
+    expect(points).toBe(5.3);
+  });
 });

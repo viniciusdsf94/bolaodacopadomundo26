@@ -60,7 +60,7 @@ export function calculateBetPoints(
         totalPoints += rulePenaltis?.points || 0;
       }
     }
-    return totalPoints * match.multiplier; // Se acertou exato, não precisa validar outras regras
+    return Math.trunc(totalPoints * match.multiplier * 10) / 10; // Se acertou exato, não precisa validar outras regras
   }
 
   // 2. Vencedor Correto (necessário para as outras regras)
@@ -94,7 +94,7 @@ export function calculateBetPoints(
     }
   }
 
-  return totalPoints * match.multiplier;
+  return Math.trunc(totalPoints * match.multiplier * 10) / 10;
 }
 
 /**

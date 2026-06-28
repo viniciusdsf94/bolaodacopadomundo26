@@ -76,7 +76,7 @@ export function getBetPointsBreakdown(
         if (penaltyCorrect) totalBeforeMultiplier += penaltyPoints;
       }
     }
-    breakdown.total = totalBeforeMultiplier * match.multiplier;
+    breakdown.total = Math.trunc(totalBeforeMultiplier * match.multiplier * 10) / 10;
     return breakdown;
   }
 
@@ -147,6 +147,6 @@ export function getBetPointsBreakdown(
     }
   }
 
-  breakdown.total = totalBeforeMultiplier * match.multiplier;
+  breakdown.total = Math.trunc(totalBeforeMultiplier * match.multiplier * 10) / 10;
   return breakdown;
 }
