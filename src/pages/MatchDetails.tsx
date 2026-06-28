@@ -457,7 +457,7 @@ const MatchDetails = () => {
                       <span className="text-xs font-normal text-muted-foreground">
                         +{rule.points} × {match.multiplier} =
                       </span>
-                      +{rule.points * match.multiplier}
+                      +{Math.trunc(rule.points * match.multiplier * 10) / 10}
                     </span>
                   ) : (
                     <span>+{rule.points}</span>
