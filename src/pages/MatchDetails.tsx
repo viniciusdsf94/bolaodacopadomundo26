@@ -41,6 +41,7 @@ const MatchDetails = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+  const [penaltyWinner, setPenaltyWinner] = useState<string | null>(null);
 
   const match = matches.find((m) => m.id === id);
 
@@ -82,6 +83,15 @@ const MatchDetails = () => {
       return;
     }
 
+    if (match.is_knockout && finalScoreA === finalScoreB && !penaltyWinner) {
+      toast({
+        title: "Erro",
+        description: "Por favor, escolha o vencedor dos pênaltis.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -92,6 +102,7 @@ const MatchDetails = () => {
           score_a: finalScoreA,
           score_b: finalScoreB,
           status: "finished",
+          penalty_winner: (match.is_knockout && finalScoreA === finalScoreB) ? penaltyWinner : null,
         })
         .eq("id", id);
 
@@ -121,6 +132,7 @@ const MatchDetails = () => {
       // Limpar formulário
       setScoreA("");
       setScoreB("");
+      setPenaltyWinner(null);
       setShowConfirmDialog(false);
 
       // Recarregar dados após um pequeno delay
@@ -166,7 +178,12 @@ const MatchDetails = () => {
           <div className="flex items-center justify-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1 w-28">
               <Flag src={match.flag_a} alt={match.team_a} size="lg" />
-              <span className="text-sm font-medium text-center leading-tight">{match.team_a}</span>
+              <span className="text-sm font-medium text-center leading-tight">
+                {match.team_a}
+                {match.status === "finished" && match.is_knockout && match.score_a === match.score_b && match.penalty_winner === "a" && (
+                  <span className="block text-[10px] font-bold text-primary">(Pênaltis)</span>
+                )}
+              </span>
             </div>
             <div className="font-display text-4xl font-black text-foreground shrink-0">
               {match.status === "finished" ? (
@@ -177,7 +194,12 @@ const MatchDetails = () => {
             </div>
             <div className="flex flex-col items-center gap-1 w-28">
               <Flag src={match.flag_b} alt={match.team_b} size="lg" />
-              <span className="text-sm font-medium text-center leading-tight">{match.team_b}</span>
+              <span className="text-sm font-medium text-center leading-tight">
+                {match.team_b}
+                {match.status === "finished" && match.is_knockout && match.score_a === match.score_b && match.penalty_winner === "b" && (
+                  <span className="block text-[10px] font-bold text-primary">(Pênaltis)</span>
+                )}
+              </span>
             </div>
           </div>
 
@@ -233,12 +255,45 @@ const MatchDetails = () => {
                 </div>
                 <Button
                   onClick={() => setShowConfirmDialog(true)}
-                  disabled={isLoading}
+                  disabled={isLoading || (match.is_knockout && scoreA !== "" && scoreB !== "" && parseInt(scoreA) === parseInt(scoreB) && !penaltyWinner)}
                   className="gap-1"
                 >
                   <Check className="h-4 w-4" /> Confirmar
                 </Button>
               </div>
+
+              {/* Seletor de vencedor de pênaltis se for mata-mata e empate */}
+              {match.is_knockout && scoreA !== "" && scoreB !== "" && parseInt(scoreA) === parseInt(scoreB) && (
+                <div className="mt-3 pt-3 border-t border-accent/20 flex flex-col items-center gap-2">
+                  <span className="text-xs font-semibold text-muted-foreground">Quem venceu nos pênaltis?</span>
+                  <div className="flex gap-2 justify-center w-full max-w-[240px]">
+                    <Button
+                      type="button"
+                      onClick={() => setPenaltyWinner("a")}
+                      variant={penaltyWinner === "a" ? "default" : "outline"}
+                      className={`flex-1 h-8 text-xs transition-all duration-200 ${
+                        penaltyWinner === "a" 
+                          ? "bg-primary text-primary-foreground font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]" 
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {match.team_a}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setPenaltyWinner("b")}
+                      variant={penaltyWinner === "b" ? "default" : "outline"}
+                      className={`flex-1 h-8 text-xs transition-all duration-200 ${
+                        penaltyWinner === "b" 
+                          ? "bg-primary text-primary-foreground font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]" 
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {match.team_b}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <div className="space-y-2">
@@ -273,11 +328,25 @@ const MatchDetails = () => {
                     </div>
                     <div className="flex-1 flex flex-col min-w-0">
                       <span className="text-sm font-medium truncate">{displayName}</span>
-                      {userPositions.has(bet.user_id) && (
-                        <span className="text-xs text-muted-foreground">
-                          #{userPositions.get(bet.user_id)} no ranking geral
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        {userPositions.has(bet.user_id) && (
+                          <span>#{userPositions.get(bet.user_id)} no ranking geral</span>
+                        )}
+                        {match.is_knockout && bet.penalty_winner && (
+                          <>
+                            <span>•</span>
+                            <span className={`font-semibold ${
+                              match.status === "finished" && match.score_a === match.score_b
+                                ? bet.penalty_winner === match.penalty_winner
+                                  ? "text-primary font-bold"
+                                  : "text-destructive"
+                                : "text-accent"
+                            }`}>
+                              Pênaltis: {bet.penalty_winner === "a" ? match.team_a : match.team_b}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <span className="font-display font-bold text-foreground">
                       {bet.score_a} × {bet.score_b}
@@ -305,12 +374,14 @@ const MatchDetails = () => {
                           >
                             {(() => {
                               const breakdown = getBetPointsBreakdown(
-                                { score_a: bet.score_a, score_b: bet.score_b },
+                                { score_a: bet.score_a, score_b: bet.score_b, penalty_winner: bet.penalty_winner },
                                 {
                                   score_a: match.score_a,
                                   score_b: match.score_b,
                                   multiplier: match.multiplier,
                                   scoring_rules: scoringRules,
+                                  is_knockout: match.is_knockout,
+                                  penalty_winner: match.penalty_winner,
                                 }
                               );
 
@@ -407,6 +478,14 @@ const MatchDetails = () => {
                   <span className="font-bold text-foreground">
                     {scoreA} × {scoreB}
                   </span>
+                  {match.is_knockout && scoreA !== "" && scoreB !== "" && parseInt(scoreA) === parseInt(scoreB) && (
+                    <>
+                      {" "}com vitória do{" "}
+                      <span className="font-bold text-primary">
+                        {penaltyWinner === "a" ? match.team_a : match.team_b}
+                      </span>{" "}nos pênaltis
+                    </>
+                  )}
                   ? Esta ação vai calcular os pontos de todas as apostas e não poderá ser desfeita.
                 </AlertDialogDescription>
               </AlertDialogHeader>

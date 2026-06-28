@@ -59,7 +59,7 @@ const Admin = () => {
   });
 
   const [newMatch, setNewMatch] = useState({
-    teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1",
+    teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1", isKnockout: false
   });
 
   // Estado para o modal de edição de partida
@@ -73,6 +73,7 @@ const Admin = () => {
     stadium: string;
     city: string;
     country: string;
+    isKnockout: boolean;
   }>({
     isOpen: false,
     matchId: "",
@@ -83,6 +84,7 @@ const Admin = () => {
     stadium: "",
     city: "",
     country: "",
+    isKnockout: false,
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -98,6 +100,7 @@ const Admin = () => {
       stadium: match.stadium || "",
       city: match.city || "",
       country: match.country || "",
+      isKnockout: match.is_knockout || false,
     });
   };
 
@@ -116,6 +119,7 @@ const Admin = () => {
           stadium: editDialog.stadium,
           city: editDialog.city,
           country: editDialog.country,
+          is_knockout: editDialog.isKnockout,
         })
         .eq("id", editDialog.matchId);
 
@@ -140,6 +144,8 @@ const Admin = () => {
     teamB: string;
     scoreA: number;
     scoreB: number;
+    isKnockout: boolean;
+    penaltyWinner: string | null;
   }>({
     isOpen: false,
     matchId: "",
@@ -147,6 +153,8 @@ const Admin = () => {
     teamB: "",
     scoreA: 0,
     scoreB: 0,
+    isKnockout: false,
+    penaltyWinner: null,
   });
 
   const [isConfirming, setIsConfirming] = useState(false);
@@ -195,12 +203,13 @@ const Admin = () => {
       match_date: newMatch.date,
       match_time: newMatch.time,
       multiplier: parseFloat(newMatch.multiplier) || 1,
+      is_knockout: newMatch.isKnockout,
     });
     if (error) {
       toast.error("Erro ao adicionar partida");
     } else {
       toast.success("Partida adicionada!");
-      setNewMatch({ teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1" });
+      setNewMatch({ teamA: "", teamB: "", flagA: "", flagB: "", date: "", time: "", multiplier: "1", isKnockout: false });
       queryClient.invalidateQueries({ queryKey: ["matches"] });
     }
   };
@@ -288,12 +297,19 @@ const Admin = () => {
       teamB: match.team_b,
       scoreA: finalScoreA,
       scoreB: finalScoreB,
+      isKnockout: match.is_knockout || false,
+      penaltyWinner: match.penalty_winner || null,
     });
   };
 
   // Função para confirmar a finalização (atualiza resultado E calcula pontos)
   const handleConfirmFinish = async () => {
     if (!confirmDialog.matchId) return;
+
+    if (confirmDialog.isKnockout && confirmDialog.scoreA === confirmDialog.scoreB && !confirmDialog.penaltyWinner) {
+      toast.error("Por favor, selecione o vencedor dos pênaltis.");
+      return;
+    }
 
     setIsConfirming(true);
 
@@ -305,6 +321,7 @@ const Admin = () => {
           score_a: confirmDialog.scoreA,
           score_b: confirmDialog.scoreB,
           status: "finished",
+          penalty_winner: (confirmDialog.isKnockout && confirmDialog.scoreA === confirmDialog.scoreB) ? confirmDialog.penaltyWinner : null,
         })
         .eq("id", confirmDialog.matchId);
 
@@ -326,7 +343,7 @@ const Admin = () => {
       toast.success(`${confirmDialog.teamA} ${confirmDialog.scoreA}×${confirmDialog.scoreB} ${confirmDialog.teamB} - Pontos calculados!`);
 
       // Fechar modal
-      setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0 });
+      setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0, isKnockout: false, penaltyWinner: null });
       
       // Limpar input
       setScoreInputs((prev) => ({
@@ -447,6 +464,18 @@ const Admin = () => {
                   <Label className="text-xs">Multiplicador</Label>
                   <Input type="number" min={1} step={0.5} value={newMatch.multiplier} onChange={(e) => setNewMatch((p) => ({ ...p, multiplier: e.target.value }))} className="bg-secondary border-border font-display font-bold" />
                 </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isKnockout"
+                  checked={newMatch.isKnockout}
+                  onChange={(e) => setNewMatch((p) => ({ ...p, isKnockout: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-secondary"
+                />
+                <Label htmlFor="isKnockout" className="text-xs font-medium cursor-pointer">
+                  Partida de Mata-Mata (Pode ter disputa de pênaltis)
+                </Label>
               </div>
               <Button onClick={handleAddMatch} className="w-full gap-1">
                 <Plus className="h-4 w-4" /> Adicionar Partida
@@ -702,14 +731,14 @@ const Admin = () => {
         {/* Modal de confirmação de finalização */}
         <AlertDialog open={confirmDialog.isOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0 });
+            setConfirmDialog({ isOpen: false, matchId: "", teamA: "", teamB: "", scoreA: 0, scoreB: 0, isKnockout: false, penaltyWinner: null });
           }
         }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Salvar Resultado?</AlertDialogTitle>
             </AlertDialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold">
                   {confirmDialog.teamA} <span className="text-accent">{confirmDialog.scoreA}</span>
@@ -720,12 +749,47 @@ const Admin = () => {
                   Os pontos serão calculados automaticamente para todos os palpites!
                 </p>
               </div>
+
+              {/* Seletor de vencedor de pênaltis se for mata-mata e empate */}
+              {confirmDialog.isKnockout && confirmDialog.scoreA === confirmDialog.scoreB && (
+                <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-center text-muted-foreground">
+                    Quem venceu na disputa de pênaltis?
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      type="button"
+                      variant={confirmDialog.penaltyWinner === "a" ? "default" : "outline"}
+                      onClick={() => setConfirmDialog(prev => ({ ...prev, penaltyWinner: "a" }))}
+                      className={`flex-1 h-9 text-xs transition-all duration-200 ${
+                        confirmDialog.penaltyWinner === "a"
+                          ? "bg-primary text-primary-foreground font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {confirmDialog.teamA}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={confirmDialog.penaltyWinner === "b" ? "default" : "outline"}
+                      onClick={() => setConfirmDialog(prev => ({ ...prev, penaltyWinner: "b" }))}
+                      className={`flex-1 h-9 text-xs transition-all duration-200 ${
+                        confirmDialog.penaltyWinner === "b"
+                          ? "bg-primary text-primary-foreground font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {confirmDialog.teamB}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isConfirming}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmFinish}
-                disabled={isConfirming}
+                disabled={isConfirming || (confirmDialog.isKnockout && confirmDialog.scoreA === confirmDialog.scoreB && !confirmDialog.penaltyWinner)}
                 className="bg-accent"
               >
                 {isConfirming ? "Salvando..." : "Confirmar e Calcular Pontos"}
@@ -825,6 +889,18 @@ const Admin = () => {
                     className="bg-secondary border-border"
                   />
                 </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editIsKnockout"
+                  checked={editDialog.isKnockout}
+                  onChange={(e) => setEditDialog(prev => ({ ...prev, isKnockout: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-secondary"
+                />
+                <Label htmlFor="editIsKnockout" className="text-xs font-medium cursor-pointer">
+                  Partida de Mata-Mata (Pode ter disputa de pênaltis)
+                </Label>
               </div>
 
               <div className="space-y-1">

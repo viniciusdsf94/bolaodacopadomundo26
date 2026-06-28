@@ -36,6 +36,7 @@ export function getBetPointsBreakdown(
   const ruleGolsVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do vencedor"));
   const ruleGolsPerdedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do perdedor"));
   const ruleEmpateGarantido = match.scoring_rules.find(r => r.label.toLowerCase().includes("empate garantido"));
+  const rulePenaltis = match.scoring_rules.find(r => r.label.toLowerCase().includes("pênaltis") || r.label.toLowerCase().includes("penais"));
 
   let totalBeforeMultiplier = 0;
 
@@ -62,6 +63,19 @@ export function getBetPointsBreakdown(
 
   if (exactMatch) {
     totalBeforeMultiplier += exactPoints;
+    // Vencedor dos Pênaltis em caso de placar exato de empate
+    if (match.is_knockout && match.score_a === match.score_b) {
+      const penaltyCorrect = bet.penalty_winner && match.penalty_winner && bet.penalty_winner === match.penalty_winner;
+      const penaltyPoints = rulePenaltis?.points || 0;
+      if (rulePenaltis) {
+        breakdown.rules.push({
+          name: rulePenaltis.label || "Vencedor dos Pênaltis",
+          points: penaltyPoints,
+          earned: !!penaltyCorrect,
+        });
+        if (penaltyCorrect) totalBeforeMultiplier += penaltyPoints;
+      }
+    }
     breakdown.total = totalBeforeMultiplier * match.multiplier;
     return breakdown;
   }
@@ -117,6 +131,20 @@ export function getBetPointsBreakdown(
       earned: loserGoalsCorrect,
     });
     if (loserGoalsCorrect) totalBeforeMultiplier += loserGoalsPoints;
+  }
+
+  // 6. Vencedor dos Pênaltis (independente de ter acertado o vencedor em tempo regulamentar)
+  if (match.is_knockout && match.score_a === match.score_b) {
+    const penaltyCorrect = bet.penalty_winner && match.penalty_winner && bet.penalty_winner === match.penalty_winner;
+    const penaltyPoints = rulePenaltis?.points || 0;
+    if (rulePenaltis) {
+      breakdown.rules.push({
+        name: rulePenaltis.label || "Vencedor dos Pênaltis",
+        points: penaltyPoints,
+        earned: !!penaltyCorrect,
+      });
+      if (penaltyCorrect) totalBeforeMultiplier += penaltyPoints;
+    }
   }
 
   breakdown.total = totalBeforeMultiplier * match.multiplier;

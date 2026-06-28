@@ -18,7 +18,7 @@ const Bets = () => {
   const { data: myBets = [], refetch: refetchBets } = useMyBets();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [bets, setBets] = useState<Record<string, { a: string; b: string }>>({});
+  const [bets, setBets] = useState<Record<string, { a: string; b: string; penaltyWinner?: string | null }>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   const activeDayRef = useRef<HTMLButtonElement | null>(null);
@@ -133,6 +133,19 @@ const Bets = () => {
     }));
   };
 
+  const handleSelectPenaltyWinner = (matchId: string, team: "a" | "b") => {
+    const existingBet = myBets.find((b) => b.match_id === matchId);
+    setBets((prev) => ({
+      ...prev,
+      [matchId]: {
+        a: prev[matchId]?.a ?? (existingBet ? String(existingBet.score_a) : ""),
+        b: prev[matchId]?.b ?? (existingBet ? String(existingBet.score_b) : ""),
+        ...prev[matchId],
+        penaltyWinner: team,
+      },
+    }));
+  };
+
   const handleSave = async (match: Match) => {
     if (!user) return;
     if (isMatchStarted(match)) {
@@ -145,9 +158,15 @@ const Bets = () => {
     // Use existing bet values if not being edited
     const scoreA = bet?.a || (existingBet ? String(existingBet.score_a) : "");
     const scoreB = bet?.b || (existingBet ? String(existingBet.score_b) : "");
+    const penaltyWinner = bet?.penaltyWinner || (existingBet ? existingBet.penalty_winner : null);
 
     if (!scoreA || !scoreB) {
       toast.error("Preencha o placar dos dois times");
+      return;
+    }
+
+    if (match.is_knockout && !penaltyWinner) {
+      toast.error("Escolha quem vence em caso de pênaltis!");
       return;
     }
 
@@ -156,7 +175,11 @@ const Bets = () => {
     if (existingBet) {
       const { error } = await supabase
         .from("bets")
-        .update({ score_a: parseInt(scoreA), score_b: parseInt(scoreB) })
+        .update({ 
+          score_a: parseInt(scoreA), 
+          score_b: parseInt(scoreB),
+          penalty_winner: match.is_knockout ? penaltyWinner : null
+        })
         .eq("id", existingBet.id);
       if (error) toast.error("Erro ao atualizar palpite");
       else toast.success("Palpite alterado com sucesso!");
@@ -166,6 +189,7 @@ const Bets = () => {
         user_id: user.id,
         score_a: parseInt(scoreA),
         score_b: parseInt(scoreB),
+        penalty_winner: match.is_knockout ? penaltyWinner : null
       });
       if (error) toast.error("Erro ao salvar palpite");
       else toast.success("Palpite salvo!");
@@ -380,6 +404,51 @@ const Bets = () => {
                         <span className="text-xs sm:text-sm font-medium text-center leading-tight">{match.team_b}</span>
                       </div>
                     </div>
+
+                    {/* Penalty winner selection for knockout matches */}
+                    {match.is_knockout && (
+                      <div className="mt-4 pt-3 border-t border-border/40 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
+                          Em caso de pênaltis, quem vence?
+                        </span>
+                        <div className="flex gap-2 justify-center w-full max-w-[260px]">
+                          <Button
+                            type="button"
+                            disabled={isLocked}
+                            onClick={() => handleSelectPenaltyWinner(match.id, "a")}
+                            variant={
+                              (bets[match.id]?.penaltyWinner ?? (existingBet ? existingBet.penalty_winner : null)) === "a"
+                                ? "default"
+                                : "outline"
+                            }
+                            className={`flex-1 h-9 gap-1 text-xs transition-all duration-200 ${
+                              (bets[match.id]?.penaltyWinner ?? (existingBet ? existingBet.penalty_winner : null)) === "a"
+                                ? "bg-primary text-primary-foreground font-extrabold shadow-[0_0_12px_rgba(34,197,94,0.35)] hover:bg-primary/90"
+                                : "text-muted-foreground hover:text-foreground border-border hover:bg-secondary"
+                            }`}
+                          >
+                            {match.team_a}
+                          </Button>
+                          <Button
+                            type="button"
+                            disabled={isLocked}
+                            onClick={() => handleSelectPenaltyWinner(match.id, "b")}
+                            variant={
+                              (bets[match.id]?.penaltyWinner ?? (existingBet ? existingBet.penalty_winner : null)) === "b"
+                                ? "default"
+                                : "outline"
+                            }
+                            className={`flex-1 h-9 gap-1 text-xs transition-all duration-200 ${
+                              (bets[match.id]?.penaltyWinner ?? (existingBet ? existingBet.penalty_winner : null)) === "b"
+                                ? "bg-primary text-primary-foreground font-extrabold shadow-[0_0_12px_rgba(34,197,94,0.35)] hover:bg-primary/90"
+                                : "text-muted-foreground hover:text-foreground border-border hover:bg-secondary"
+                            }`}
+                          >
+                            {match.team_b}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex items-center justify-center mt-3 gap-2">

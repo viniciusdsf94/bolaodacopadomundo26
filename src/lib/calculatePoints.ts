@@ -10,6 +10,7 @@ interface ScoringRule {
 export interface BetScore {
   score_a: number;
   score_b: number;
+  penalty_winner?: string | null;
 }
 
 export interface MatchScore {
@@ -17,6 +18,8 @@ export interface MatchScore {
   score_b: number;
   multiplier: number;
   scoring_rules: ScoringRule[];
+  is_knockout?: boolean;
+  penalty_winner?: string | null;
 }
 
 /**
@@ -41,6 +44,7 @@ export function calculateBetPoints(
   const ruleGolsVencedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do vencedor"));
   const ruleGolsPerdedor = match.scoring_rules.find(r => r.label.toLowerCase().includes("gols do perdedor"));
   const ruleEmpateGarantido = match.scoring_rules.find(r => r.label.toLowerCase().includes("empate garantido"));
+  const rulePenaltis = match.scoring_rules.find(r => r.label.toLowerCase().includes("pênaltis") || r.label.toLowerCase().includes("penais"));
 
   // 0. Empate Garantido (independente do resultado da partida)
   if (bet.score_a === bet.score_b) {
@@ -50,6 +54,12 @@ export function calculateBetPoints(
   // 1. Placar Exato
   if (bet.score_a === match.score_a && bet.score_b === match.score_b) {
     totalPoints += ruleExato?.points || 0;
+    // Vencedor dos Pênaltis em caso de placar exato de empate
+    if (match.is_knockout && match.score_a === match.score_b) {
+      if (bet.penalty_winner && match.penalty_winner && bet.penalty_winner === match.penalty_winner) {
+        totalPoints += rulePenaltis?.points || 0;
+      }
+    }
     return totalPoints * match.multiplier; // Se acertou exato, não precisa validar outras regras
   }
 
@@ -74,6 +84,13 @@ export function calculateBetPoints(
       totalPoints += ruleGolsPerdedor?.points || 0;
     } else if (matchWinner === "b" && bet.score_a === match.score_a) {
       totalPoints += ruleGolsPerdedor?.points || 0;
+    }
+  }
+
+  // 6. Vencedor dos Pênaltis (independente de ter acertado o vencedor em tempo regulamentar)
+  if (match.is_knockout && match.score_a === match.score_b) {
+    if (bet.penalty_winner && match.penalty_winner && bet.penalty_winner === match.penalty_winner) {
+      totalPoints += rulePenaltis?.points || 0;
     }
   }
 
@@ -116,12 +133,18 @@ export async function updateMatchBetsPoints(
     // 4. Calcular pontos para cada aposta
     const updates = bets.map(bet => {
       const points = calculateBetPoints(
-        { score_a: bet.score_a, score_b: bet.score_b },
+        { 
+          score_a: bet.score_a, 
+          score_b: bet.score_b, 
+          penalty_winner: bet.penalty_winner 
+        },
         {
           score_a,
           score_b,
           multiplier: matchData.multiplier,
           scoring_rules: scoringRules,
+          is_knockout: matchData.is_knockout,
+          penalty_winner: matchData.penalty_winner,
         }
       );
 
