@@ -179,7 +179,7 @@ const Ranking = () => {
 
                   <div className="text-right">
                     <p className="font-display text-xl font-bold text-gradient-gold">
-                      {user.total_points}
+                      {Math.trunc(user.total_points * 10) / 10}
                     </p>
                     <p className="text-xs text-muted-foreground">pontos</p>
                   </div>

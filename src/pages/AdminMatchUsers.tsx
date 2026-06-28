@@ -144,7 +144,9 @@ const AdminMatchUsers = () => {
                       {user.betDetails && user.betDetails.points !== null && (
                         <div className="text-right shrink-0">
                           <p className={`text-xs font-bold ${user.betDetails.points > 0 ? "text-accent" : "text-muted-foreground"}`}>
-                            {user.betDetails.points > 0 ? `+${user.betDetails.points}` : "0"} pts
+                            {user.betDetails.points > 0 
+                              ? `+${Math.trunc(user.betDetails.points * 10) / 10}` 
+                              : Math.trunc(user.betDetails.points * 10) / 10} pts
                           </p>
                         </div>
                       )}

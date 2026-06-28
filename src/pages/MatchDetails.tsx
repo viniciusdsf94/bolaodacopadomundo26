@@ -360,7 +360,7 @@ const MatchDetails = () => {
                           }}
                           className={`font-display font-bold text-sm cursor-help ${bet.points > 0 ? "text-primary" : "text-muted-foreground"}`}
                         >
-                          {bet.points > 0 ? `+${bet.points}` : bet.points} pts
+                          {bet.points > 0 ? `+${Math.trunc(bet.points * 10) / 10}` : Math.trunc(bet.points * 10) / 10} pts
                         </button>
 
                         {/* Tooltip Mobile/Click */}
