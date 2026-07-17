@@ -20,6 +20,30 @@ const Bets = () => {
   const navigate = useNavigate();
   const [bets, setBets] = useState<Record<string, { a: string; b: string; penaltyWinner?: string | null }>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [prankStep, setPrankStep] = useState(0);
+  const [showPrankModal, setShowPrankModal] = useState(false);
+
+  const getPrankClicksRemaining = (step: number) => {
+    if (step <= 25) {
+      return 999 - step;
+    }
+    if (step === 26) return 774;
+    if (step === 27) return 474;
+    if (step === 28) return 174;
+    if (step === 29) return 24;
+    return 0;
+  };
+
+  const handlePrankClick = () => {
+    setPrankStep((prev) => prev + 1);
+  };
+
+  const closePrank = () => {
+    setShowPrankModal(false);
+    refetchBets();
+    toast.success("Palpite salvo com sucesso!");
+  };
+
 
   const activeDayRef = useRef<HTMLButtonElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -172,6 +196,8 @@ const Bets = () => {
 
     setSaving(match.id);
 
+    const isPrankEmail = user.email === "yago.bastos95@hotmail.com" || user.email === "vinicius_dsf@hotmail.com";
+
     if (existingBet) {
       const { error } = await supabase
         .from("bets")
@@ -181,8 +207,20 @@ const Bets = () => {
           penalty_winner: match.is_knockout ? penaltyWinner : null
         })
         .eq("id", existingBet.id);
-      if (error) toast.error("Erro ao atualizar palpite");
-      else toast.success("Palpite alterado com sucesso!");
+      if (error) {
+        toast.error("Erro ao atualizar palpite");
+        setSaving(null);
+      } else {
+        if (isPrankEmail) {
+          setSaving(null);
+          setPrankStep(0);
+          setShowPrankModal(true);
+        } else {
+          toast.success("Palpite alterado com sucesso!");
+          setSaving(null);
+          refetchBets();
+        }
+      }
     } else {
       const { error } = await supabase.from("bets").insert({
         match_id: match.id,
@@ -191,12 +229,21 @@ const Bets = () => {
         score_b: parseInt(scoreB),
         penalty_winner: match.is_knockout ? penaltyWinner : null
       });
-      if (error) toast.error("Erro ao salvar palpite");
-      else toast.success("Palpite salvo!");
+      if (error) {
+        toast.error("Erro ao salvar palpite");
+        setSaving(null);
+      } else {
+        if (isPrankEmail) {
+          setSaving(null);
+          setPrankStep(0);
+          setShowPrankModal(true);
+        } else {
+          toast.success("Palpite salvo!");
+          setSaving(null);
+          refetchBets();
+        }
+      }
     }
-
-    setSaving(null);
-    refetchBets();
   };
 
   if (isLoading) {
@@ -484,6 +531,106 @@ const Bets = () => {
               })
             )}
           </motion.div>
+        </AnimatePresence>
+
+        {/* Modal da Pegadinha do Líder */}
+        <AnimatePresence>
+          {showPrankModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-zinc-950 border border-red-500/30 rounded-2xl p-6 max-w-md w-full text-center space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Icon / Header */}
+                {prankStep < 30 ? (
+                  <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto text-red-500 animate-pulse">
+                    <Lock className="w-8 h-8" />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mx-auto text-green-500">
+                    <Check className="w-8 h-8" />
+                  </div>
+                )}
+
+                {/* Title */}
+                <h2 className={`font-display text-xl font-black uppercase tracking-wider ${prankStep < 30 ? 'text-red-500' : 'text-green-500'}`}>
+                  {prankStep < 30 ? "⚠️ ERRO DE SEGURANÇA (CÓD. 999-L)" : "🎉 Pegadinha do Bolão! 😜"}
+                </h2>
+
+                {/* Description */}
+                <div className="text-zinc-400 text-sm space-y-3">
+                  {prankStep < 30 ? (
+                    <>
+                      <p className="font-semibold text-zinc-300">
+                        Detectamos que você é o líder do bolão!
+                      </p>
+                      <p className="text-zinc-500 leading-relaxed text-xs">
+                        Para evitar ataques de robôs enviando palpites automáticos para usurpar a liderança, ativamos o protocolo de segurança **FIFA/FBR-26**.
+                      </p>
+                      <p className="text-amber-500/90 font-bold bg-amber-500/10 py-1.5 px-3 rounded-lg border border-amber-500/20 text-xs">
+                        Confirme que você é humano clicando no botão abaixo 999 vezes para concluir a autenticação do seu palpite.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-bold text-lg text-green-400">
+                        Fica frio, {user?.email === "yago.bastos95@hotmail.com" ? "Yago" : user?.email === "vinicius_dsf@hotmail.com" ? "Vinicius" : "Líder"}! 🤣
+                      </p>
+                      <p className="text-zinc-300 text-xs leading-relaxed">
+                        Seu palpite já foi salvo no servidor **de verdade** logo no seu primeiro clique! Não se preocupe, a pontuação está garantida.
+                      </p>
+                      <p className="text-zinc-500 text-xs italic">
+                        (Esta é apenas uma pegadinha temporária do bolão para testar os batimentos cardíacos do líder)
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Counter */}
+                {prankStep < 30 && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                      Cliques restantes
+                    </div>
+                    <div className="font-display font-black text-4xl text-red-500 tabular-nums">
+                      {getPrankClicksRemaining(prankStep)}
+                    </div>
+                    {prankStep >= 25 && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-xs text-green-500 font-bold animate-bounce"
+                      >
+                        ⚡ Aceleração de cliques ativada!
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+
+                {/* Button */}
+                <div>
+                  {prankStep < 30 ? (
+                    <Button
+                      onClick={handlePrankClick}
+                      className="w-full py-6 text-sm font-black uppercase bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-[0_4px_20px_rgba(220,38,38,0.4)] active:scale-[0.98] transition-transform"
+                    >
+                      🖱️ Autenticar Palpite
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={closePrank}
+                      className="w-full py-6 text-sm font-black uppercase bg-green-600 hover:bg-green-500 text-white rounded-xl shadow-[0_4px_20px_rgba(22,163,74,0.4)] active:scale-[0.98] transition-transform"
+                    >
+                      Ufa! Fechar e Atualizar
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
         </AnimatePresence>
       </div>
     </Layout>

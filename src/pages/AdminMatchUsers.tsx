@@ -119,13 +119,15 @@ const AdminMatchUsers = () => {
                           <p className="text-sm font-bold">{user.displayName}</p>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs mt-1">
                             <span className="text-primary flex items-center gap-1 font-medium">
-                              <CheckCircle2 className="h-3 w-3" /> Palpitou
+                              <CheckCircle2 className="h-3 w-3" /> Palpitou: <span className="font-bold text-foreground ml-0.5">{user.betDetails?.score_a} × {user.betDetails?.score_b}</span>
                             </span>
                             {match.is_knockout && (
                               <>
                                 <span className="text-muted-foreground/50">•</span>
                                 <span className={`font-semibold ${user.betDetails?.penalty_winner ? "text-accent" : "text-destructive"}`}>
-                                  Palpite de Pênaltis: {user.betDetails?.penalty_winner ? "Definido" : "Pendente"}
+                                  Pênaltis: {user.betDetails?.penalty_winner 
+                                    ? (user.betDetails.penalty_winner === "a" ? match.team_a : match.team_b) 
+                                    : "Pendente"}
                                 </span>
                               </>
                             )}
